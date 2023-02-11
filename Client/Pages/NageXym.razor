@@ -1,0 +1,85 @@
+﻿@page "/nagexym"
+@using nagexymsharpweb.Excels;
+@using nagexymsharpweb.Models;
+@using System.ComponentModel
+@using AntDesign
+
+<h3>NageXym</h3>
+<div>
+    <div style="display:@display">
+        <Alert Message="@errorMessage" Type="@AlertType.Warning" Closable OnClose="@CloseAlert"/>
+    </div>
+    <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
+    <Upload Name="files" FileList="fileList">
+    <label class="ant-btn" for="fileInput">
+        <Icon Type="upload" />
+        Upload Excel file
+    </label>
+    </Upload>
+    <Divider></Divider>
+</div>
+
+<Table DataSource="@data" Bordered>
+    <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
+    <PropertyColumn Property="c=>c.Name"></PropertyColumn>
+    <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
+    <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
+  <PropertyColumn Property="c=>c.Address"></PropertyColumn>
+</Table>
+
+@code {
+
+    private List<DataItem> data;
+    private List<UploadFileItem> fileList = new List<UploadFileItem>();
+
+    private string errorMessage = string.Empty;
+    private string display = "none";
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var file = e.GetMultipleFiles().First();
+
+            var excelFileData = new byte[file.Size];
+            await file.OpenReadStream(file.Size).ReadAsync(excelFileData);
+
+            var tempFilePath = Path.GetTempFileName() + file.Name;
+
+            // 拡張子をチェック
+            if (!string.Equals(Path.GetExtension(file.Name), ".xlsx"))
+            {
+                errorMessage = "拡張子が.xlsxではありません。";
+                display = "inherit";
+                return;
+            }
+            else
+            {
+                errorMessage = string.Empty;
+                display = "none";
+            }
+
+            using (var fs = File.Create(tempFilePath))
+            using (var binaryWriter = new BinaryWriter(fs))
+            {
+                binaryWriter.Write(excelFileData);
+            }
+            // データクリア
+            data = new List<DataItem>();
+
+            // Excelファイル読込み
+            ExcelManager excel = new ExcelManager(tempFilePath);
+            data = excel.ReadExcelFile();
+        }
+        catch(Exception ex)
+        {
+            errorMessage = ex.Message;
+            display = "inherit";
+        }
+    }
+
+    private void CloseAlert()
+    {
+        errorMessage = string.Empty;
+        display = "none";
+    }
+}
