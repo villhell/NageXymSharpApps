@@ -3,37 +3,57 @@
 @using nagexymsharpweb.Models;
 @using System.ComponentModel
 @using AntDesign
+@inject IMessageService _message
 
-<h3>NageXym</h3>
 <div>
-    <div style="display:@display">
-        <Alert Message="@errorMessage" Type="@AlertType.Warning" Closable OnClose="@CloseAlert"/>
-    </div>
-    <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
-    <Upload Name="files" FileList="fileList">
-    <label class="ant-btn" for="fileInput">
-        <Icon Type="upload" />
-        Upload Excel file
-    </label>
-    </Upload>
+    <GridRow Gutter="16">
+        <GridCol Class="gutter-row" Span="6"><h1>@_title</h1></GridCol>
+        @*<GridCol Class="gutter-row" Span="6">@_subTitle</GridCol>*@
+    </GridRow>
+    <GridRow>
+        <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
+        <Upload Name="files" FileList="fileList">
+        <label class="ant-btn" for="fileInput">
+            <Icon Type="upload" />
+            Upload Excel file
+        </label>
+        </Upload>
+    </GridRow>
     <Divider></Divider>
+
+    <GridRow>
+        <GridCol Class="gutter-row" Span="16">
+            <Table
+                DataSource="@data"
+                PageSize="100"
+                Loading=_loading
+                Bordered>
+                <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
+                <PropertyColumn Property="c=>c.Name"></PropertyColumn>
+                <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
+                <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
+                <PropertyColumn Property="c=>c.Address"></PropertyColumn>
+            </Table>
+        </GridCol>
+    </GridRow>
 </div>
 
-<Table DataSource="@data" Bordered>
-    <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
-    <PropertyColumn Property="c=>c.Name"></PropertyColumn>
-    <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
-    <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
-  <PropertyColumn Property="c=>c.Address"></PropertyColumn>
-</Table>
 
 @code {
-
+    private string _title = string.Empty;
+    private string _subTitle = string.Empty;
     private List<DataItem> data;
     private List<UploadFileItem> fileList = new List<UploadFileItem>();
-
+    private bool _loading = false;
     private string errorMessage = string.Empty;
     private string display = "none";
+
+    protected override void OnInitialized()
+    {
+        _title = "nagexymsharp";
+        _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
+        base.OnInitialized();
+    }
     private async Task UploadFiles(InputFileChangeEventArgs e)
     {
         try
@@ -66,14 +86,41 @@
             // データクリア
             data = new List<DataItem>();
 
+            // ローディング開始
+            _loading = true;
+            StateHasChanged();
+
+            var config = new MessageConfig
+            {
+                Content = "Loading...",
+            };
+            await _message.Loading(config);
+
             // Excelファイル読込み
             ExcelManager excel = new ExcelManager(tempFilePath);
-            data = excel.ReadExcelFile();
+            data = await excel.ReadExcelFileAsync();
+
+            // ローディング終了
+            _loading = false;
+            StateHasChanged();
+            config = new MessageConfig
+            {
+                Content = "Loaded",
+                Duration = 2,
+            };
+            await _message.Success(config);
+
         }
         catch(Exception ex)
         {
             errorMessage = ex.Message;
             display = "inherit";
+        }
+        finally
+        {
+            // ローディング終了
+            _loading = false;
+            StateHasChanged();
         }
     }
 

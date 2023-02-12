@@ -3,6 +3,32 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <RootNamespace>NageXymSharpApps.Shared</RootNamespace>
+    <LangVersion>10.0</LangVersion>
+    <EnforceCodeStyleInBuild>False</EnforceCodeStyleInBuild>
+    <EnableNETAnalyzers>False</EnableNETAnalyzers>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="CatSdk\Nem\**" />
+    <EmbeddedResource Remove="CatSdk\Nem\**" />
+    <None Remove="CatSdk\Nem\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="CatSdk\Facade\NemFacade.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="CatSdk\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BouncyCastle.Crypto">
+      <HintPath>lib\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+    <Reference Include="CatSdk">
+      <HintPath>lib\CatSdk.dll</HintPath>
+    </Reference>
+  </ItemGroup>
 
 </Project>
