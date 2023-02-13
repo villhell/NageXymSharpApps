@@ -1,7 +1,7 @@
 using System;
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.Utils;
 
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     /**
      * Represents a fixed size byte array.

@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace NageXymSharpApps.Shared.CatSdk.CryptoTypes
+namespace CatSdk.CryptoTypes
 {
     /**
 	 *  Represents a private key.

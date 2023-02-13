@@ -2,7 +2,7 @@ using System;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace NageXymSharpApps.Shared.CatSdk.Crypto
+namespace CatSdk.Crypto
 {
     public static class CatapultCrypto
     {

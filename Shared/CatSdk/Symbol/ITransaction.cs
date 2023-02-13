@@ -1,4 +1,4 @@
-namespace NageXymSharpApps.Shared.CatSdk.Symbol
+namespace CatSdk.Symbol
 {
     public interface ITransaction : IBaseTransaction
     {

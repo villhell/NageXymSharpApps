@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.Utils;
 
-namespace NageXymSharpApps.Shared.CatSdk.Symbol.Factory
+namespace CatSdk.Symbol.Factory
 {
     /**
      * Factory for creating Symbol transactions.

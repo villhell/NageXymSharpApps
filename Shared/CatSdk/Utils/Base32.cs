@@ -1,7 +1,7 @@
 using System;
 using System.Text;
 
-namespace NageXymSharpApps.Shared.CatSdk.Utils
+namespace Utils
 {
     public static class Base32
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace NageXymSharpApps.Shared.CatSdk.Utils
+namespace CatSdk.Utils
 {
     public static class ArrayHelpers
     {

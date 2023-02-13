@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace NageXymSharpApps.Shared.CatSdk.Crypto
+namespace CatSdk.Crypto
 {
     public static class NaclCatapult
     {

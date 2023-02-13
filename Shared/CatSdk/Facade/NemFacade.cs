@@ -2,7 +2,7 @@ using CatSdk.Nem;
 using CatSdk.Nem.Factory;
 using Org.BouncyCastle.Crypto.Digests;
 
-namespace NageXymSharpApps.Shared.CatSdk.Facade
+namespace CatSdk.Facade
 {
     /**
      * Facade used to interact with NEM blockchain.

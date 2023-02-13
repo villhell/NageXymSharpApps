@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using Org.BouncyCastle.Crypto.Digests;
 
-namespace NageXymSharpApps.Shared.CatSdk.Symbol
+namespace CatSdk.Symbol
 {
     public static class IdGenerator
     {

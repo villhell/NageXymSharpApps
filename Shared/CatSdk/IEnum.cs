@@ -1,4 +1,4 @@
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     public interface IEnum<out T>: ISerializer
     {

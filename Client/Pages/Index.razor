@@ -1,7 +1,19 @@
 ﻿@page "/"
 @using AntDesign;
-@using NageXymSharpApps.Shared;
+@using CatSdk.CryptoTypes;
+@using CatSdk.Facade;
+@using CatSdk.Symbol;
+@using CatSdk.Symbol.Factory;
+@using CatSdk.Utils;
+@using System.Text;
 @inject IMessageService _message
+@using System.Net.Http;
+@using System.Net.Http.Json;
+@using NageXymSharpApps.Client.Models;
+@inject HttpClient httpClient
+@inject IJSRuntime JSRuntime
+
+
 <PageTitle>Index</PageTitle>
 
 <h1>Hello, world!</h1>
@@ -14,9 +26,68 @@ Welcome to your new app.
 </Button>
 
 @code {
+    protected override async void OnInitialized()
+    {
+        //var module = await JSRuntime.InvokeAsync<IJSObjectReference>(
+        //    "import", "./js/sss-extention.js"
+        //);
+
+        //var obj = await module.InvokeAsync<SssExtention>("getSssObject");
+
+        //base.OnInitialized();
+    }
     private void OnClick()
     {
         Console.WriteLine("onclick");
-        _message.Info("This is a normal message");
+        Send();
+    }
+
+    private async Task Send()
+    {
+        var facade = new SymbolFacade(Network.TestNet);
+        var privateKey = new PrivateKey("PRIVATE_KEY");
+        var keyPair = new KeyPair(privateKey);
+
+        var tx = new TransferTransactionV1
+        {
+            Network = NetworkType.TESTNET,
+            RecipientAddress = new UnresolvedAddress(Converter.StringToAddress("TO_ADDRESS")),
+            Mosaics = new UnresolvedMosaic[]
+            {
+                new()
+                {
+                    //MosaicId = new UnresolvedMosaicId(0x3A8416DB2D53B6C8),
+                    MosaicId = new UnresolvedMosaicId(0x72C0212E67A08BCE),
+                    Amount = new Amount(1000000)
+                },
+            },
+            SignerPublicKey = keyPair.PublicKey,
+            Message = Converter.Utf8ToPlainMessage("Hello, Symbol"),
+            Fee = new Amount(1000000),
+            Deadline = new Timestamp(facade.Network.FromDatetime<NetworkTimestamp>(DateTime.UtcNow).AddHours(2).Timestamp)
+        };
+
+        var signature = facade.SignTransaction(keyPair, tx);
+        var payload = TransactionsFactory.AttachSignature(tx, signature);
+        var signed = TransactionsFactory.AttachSignatureTransaction(tx, signature);
+        var hash = facade.HashTransaction(TransactionsFactory.AttachSignatureTransaction(tx, signature));
+        Console.WriteLine(payload);
+        Console.WriteLine(hash);
+        Console.WriteLine(signed.Signature);
+
+        const string node = "http://sym-test-01.opening-line.jp:3000";
+        
+        var content = new StringContent(payload, Encoding.UTF8, "application/json");
+
+        try
+        {
+            var response = await httpClient.PutAsync(node + "/transactions", content);
+            var responseDetailsJson = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(responseDetailsJson);
+
+        }catch(Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     }
 }
