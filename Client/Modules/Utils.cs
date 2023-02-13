@@ -78,12 +78,24 @@ namespace NageXymSharpApps.Client.Modules
                 // アドレスの文字列かどうか
                 if (CheckAddress(address))
                 {
-                    var accountResult = await client.GetAsync(string.Format("{0}/accounts/{1}",node , address));
+                    var accountResult = await client.GetAsync(string.Format("{0}/accounts/{1}", node, address));
                     var content = await accountResult.Content.ReadAsStringAsync();
                     ret = JsonConvert.DeserializeObject<AccountResponse>(content);
-                    
-                    if (ret!.Account == null) return null;
-                    else return ret;
+
+                    if (ret!.Account == null)
+                    {
+                        return null;
+                    }
+                    else
+                    {
+                        // 受信制限があるか
+                        var restrictionsAccountResponse = await client.GetAsync(string.Format("{0}/restrictions/account/{1}", node, address));
+                        content = await accountResult.Content.ReadAsStringAsync();
+                        var restrictRet = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(content);
+                        
+                        // 受信制限なしならアドレス情報を返す。そうでなければnullを返す
+                        return string.Equals(restrictRet!.Code, "ResourceNotFound") ? null : ret;
+                    }
                 }
                 return ret;
             }
@@ -121,6 +133,37 @@ namespace NageXymSharpApps.Client.Modules
             {
                 return null;
             }
+        }
+        #endregion
+
+        #region アドレス制限情報があるか
+        /// <summary>
+        /// アドレス情報を取得
+        /// </summary>
+        /// <param name="address"></param>
+        /// <param name="client"></param>
+        /// <returns></returns>
+        internal async static Task<bool> IsRestrictionAccountAsync(string address, HttpClient client, string node)
+        {
+            bool ret = false;
+
+            try
+            {
+                var restrictionsAccountResult = await client.GetAsync(string.Format("{0}/restrictions/account/{1}", node, address));
+                var content = await restrictionsAccountResult.Content.ReadAsStringAsync();
+                var restrictionsAccount = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(content);
+
+                // 受信制限なし
+                if (string.Equals(restrictionsAccount!.Code, "ResourceNotFound")) ret = false;
+                else ret = true;
+            }
+            catch (Exception)
+            {
+                // エラーの場合でも制限なしとする
+                return false;
+            }
+
+            return ret;
         }
         #endregion
     }
