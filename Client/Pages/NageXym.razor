@@ -1,4 +1,5 @@
 ﻿@page "/nagexym"
+@using CatSdk.Utils;
 @using nagexymsharpweb.Excels;
 @using nagexymsharpweb.Models;
 @using System.ComponentModel
@@ -163,8 +164,21 @@
             if (addressResponse != null)
             {
                 // アドレス情報取得成功
-                row.Check = "OK";
-                // アドレスが取得できていれば次の行へ
+
+                // 受信制限があるか
+                var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(row.Address, httpClient, _nodeUrl);
+                if (!isRestrictionsAccount)
+                {
+                    // 受信制限なし
+                    row.Check = "OK";
+                }
+                else
+                {
+                    // 受信制限あり
+                    row.Check = "Restricted reception";
+                }
+
+                // 次の行へ
                 continue;
             }
 
@@ -173,9 +187,25 @@
             if(namespaceResponse != null)
             {
                 // ネームスペース情報取得成功
-                row.Check = "OK";
+                var address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
+                address = Converter.AddressToString(Converter.HexToBytes(address));
+                
+                // 受信制限があるか
+                var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(address, httpClient, _nodeUrl);
+                if (!isRestrictionsAccount)
+                {
+                    // 受信制限なし
+                    row.Check = "OK";
+                }
+                else
+                {
+                    // 受信制限あり
+                    row.Check = "Restricted reception";
+                }
+                
+                // row.Check = "OK";
                 row.Namespace = row.Address;
-                row.Address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
+                row.Address = address;
             }
         }
 
