@@ -1,8 +1,8 @@
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.Utils;
 using System;
 using System.Collections.Generic;
 
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     /**
      * Processes and looks up transaction descriptor properties.

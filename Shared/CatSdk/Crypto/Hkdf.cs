@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace NageXymSharpApps.Shared.CatSdk.Crypto
+namespace CatSdk.Crypto
 {
     public class Hkdf
     {

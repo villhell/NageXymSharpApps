@@ -2,13 +2,13 @@ using System;
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.Utils;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
 
-namespace NageXymSharpApps.Shared.CatSdk.Crypto
+namespace CatSdk.Crypto
 {
     public static class Crypto
     {

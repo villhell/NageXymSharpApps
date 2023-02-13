@@ -1,6 +1,6 @@
 using System;
 
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     /**
      * Represents a network timestamp.

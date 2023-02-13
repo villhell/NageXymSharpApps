@@ -1,4 +1,4 @@
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     /**
      * Represents a base integer.

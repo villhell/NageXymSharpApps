@@ -1,8 +1,8 @@
-using NageXymSharpApps.Shared.CatSdk.CryptoTypes;
+using CatSdk.CryptoTypes;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
 
-namespace NageXymSharpApps.Shared.CatSdk.Symbol
+namespace CatSdk.Symbol
 {
     /**
 	 * Represents an ED25519 private and public key.

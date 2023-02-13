@@ -2,57 +2,66 @@
 @using nagexymsharpweb.Excels;
 @using nagexymsharpweb.Models;
 @using System.ComponentModel
+@using NageXymSharpApps.Client.Modules;
 @using AntDesign
 @inject IMessageService _message
+@inject HttpClient httpClient
 
 <div>
-    <GridRow Gutter="16">
-        <GridCol Class="gutter-row" Span="6"><h1>@_title</h1></GridCol>
-        @*<GridCol Class="gutter-row" Span="6">@_subTitle</GridCol>*@
-    </GridRow>
-    <GridRow>
-        <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
-        <Upload Name="files" FileList="fileList">
-        <label class="ant-btn" for="fileInput">
-            <Icon Type="upload" />
-            Upload Excel file
-        </label>
-        </Upload>
-    </GridRow>
+
+    <h1>@_title</h1>
+    <Space>
+        <SpaceItem>
+            <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
+            <Upload Name="files" FileList="fileList">
+            <label class="ant-btn" for="fileInput">
+                <Icon Type="upload" />
+                Upload Excel file
+            </label>
+            </Upload>
+        </SpaceItem>
+        <SpaceItem>
+            <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
+        </SpaceItem>
+        <SpaceItem>
+            <Text>node url</Text>
+            <Input @bind-Value="@_nodeUrl" />
+            @*<p>value:@_str</p>*@
+        </SpaceItem>
+    </Space>
+    
     <Divider></Divider>
 
-    <GridRow>
-        <GridCol Class="gutter-row" Span="16">
-            <Table
-                DataSource="@data"
-                PageSize="100"
-                Loading=_loading
-                Bordered>
-                <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
-                <PropertyColumn Property="c=>c.Name"></PropertyColumn>
-                <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
-                <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
-                <PropertyColumn Property="c=>c.Address"></PropertyColumn>
-            </Table>
-        </GridCol>
-    </GridRow>
+    <Table
+        DataSource="@datas"
+        PageSize="100"
+        Loading=_loading
+        Bordered>
+        <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
+        <PropertyColumn Property="c=>c.Name"></PropertyColumn>
+        <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
+        <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
+        <PropertyColumn Property="c=>c.Address"></PropertyColumn>
+    </Table>
 </div>
 
 
 @code {
+    private string _port = ":3000";
+    private string _prefix = "http://";
+    private string _nodeUrl = "http://sym-test-01.opening-line.jp:3000";
     private string _title = string.Empty;
     private string _subTitle = string.Empty;
-    private List<DataItem> data;
+    private List<DataItem> datas;
     private List<UploadFileItem> fileList = new List<UploadFileItem>();
     private bool _loading = false;
-    private string errorMessage = string.Empty;
-    private string display = "none";
 
     protected override void OnInitialized()
     {
+        base.OnInitialized();
         _title = "nagexymsharp";
         _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
-        base.OnInitialized();
+        datas = new List<DataItem>();
     }
     private async Task UploadFiles(InputFileChangeEventArgs e)
     {
@@ -68,14 +77,8 @@
             // 拡張子をチェック
             if (!string.Equals(Path.GetExtension(file.Name), ".xlsx"))
             {
-                errorMessage = "拡張子が.xlsxではありません。";
-                display = "inherit";
+                await _message.Warning("拡張子が.xlsxではありません。");
                 return;
-            }
-            else
-            {
-                errorMessage = string.Empty;
-                display = "none";
             }
 
             using (var fs = File.Create(tempFilePath))
@@ -84,7 +87,7 @@
                 binaryWriter.Write(excelFileData);
             }
             // データクリア
-            data = new List<DataItem>();
+            datas = new List<DataItem>();
 
             // ローディング開始
             _loading = true;
@@ -98,7 +101,7 @@
 
             // Excelファイル読込み
             ExcelManager excel = new ExcelManager(tempFilePath);
-            data = await excel.ReadExcelFileAsync();
+            datas = await excel.ReadExcelFileAsync();
 
             // ローディング終了
             _loading = false;
@@ -113,8 +116,7 @@
         }
         catch(Exception ex)
         {
-            errorMessage = ex.Message;
-            display = "inherit";
+            await _message.Error(ex.Message);
         }
         finally
         {
@@ -124,9 +126,63 @@
         }
     }
 
-    private void CloseAlert()
+    /// <summary>
+    /// 一覧に表示されたアドレス/ネームスペースをチェックする
+    /// </summary>
+    private async Task Check_Click()
     {
-        errorMessage = string.Empty;
-        display = "none";
+        // 一覧に何も表示されていなければ以降の処理を行わない
+        if (datas.Count == 0)
+        {
+            await _message.Warning("Excelファイルを読み込んでください。");
+            return;
+        }
+
+        // ノードが入力されていなければ以降の処理を行わない
+        if (string.IsNullOrEmpty(_nodeUrl))
+        {
+            await _message.Warning("ノードのURLを指定して下さい。");
+            return;
+        }
+
+        // グリッドを一行ずつ読んでいく
+        foreach(var row in datas)
+        {
+            StateHasChanged();
+
+            // アドレス欄が空白
+            if (string.IsNullOrEmpty(row.Address))
+            {
+                // NGを設定して次の行へ
+                row.Check = "NG";
+                continue;
+            }
+
+            // アドレス情報取得
+            var addressResponse = await Utils.GetAddressAsync(row.Address, httpClient, _nodeUrl);
+            if (addressResponse != null)
+            {
+                // アドレス情報取得成功
+                row.Check = "OK";
+                // アドレスが取得できていれば次の行へ
+                continue;
+            }
+
+            // アドレス情報が取得できなければネームスペース情報を取得
+            var namespaceResponse = await Utils.GetNamespaceAsync(row.Address, httpClient, _nodeUrl);
+            if(namespaceResponse != null)
+            {
+                // ネームスペース情報取得成功
+                row.Check = "OK";
+                row.Namespace = row.Address;
+                row.Address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
+            }
+        }
+
+    }
+
+    private void OnItemChanged()
+    {
+        
     }
 }

@@ -23,6 +23,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Reference Include="BouncyCastle.Crypto">
       <HintPath>lib\BouncyCastle.Crypto.dll</HintPath>
     </Reference>

@@ -1,9 +1,9 @@
 using Org.BouncyCastle.Crypto.Digests;
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.Utils;
 using System;
 using System.Linq;
 
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     /**
 	 * Represents a network.

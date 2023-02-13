@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using NageXymSharpApps.Shared.CatSdk.Utils;
-
-namespace NageXymSharpApps.Shared.CatSdk.Symbol{
+using CatSdk.Utils;
+namespace CatSdk.Symbol{
 
 public class Amount : BaseValue, ISerializer {
 	public const byte SIZE = 8;

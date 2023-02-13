@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using Org.BouncyCastle.Crypto.Digests;
 
-namespace NageXymSharpApps.Shared.CatSdk.Symbol
+namespace CatSdk.Symbol
 {
     /**
      * Builder for creating a merkle hash.

@@ -2,9 +2,9 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.Utils;
 
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     /**
      * Rule based transaction factory.

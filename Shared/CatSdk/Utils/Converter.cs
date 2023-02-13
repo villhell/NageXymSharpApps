@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-namespace NageXymSharpApps.Shared.CatSdk.Utils
+namespace CatSdk.Utils
 {
     public static class Converter
     {

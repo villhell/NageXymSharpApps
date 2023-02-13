@@ -1,12 +1,12 @@
 ﻿
-using NageXymSharpApps.Shared.CatSdk.CryptoTypes;
-using NageXymSharpApps.Shared.CatSdk.Facade;
-using NageXymSharpApps.Shared.CatSdk.Symbol;
-using NageXymSharpApps.Shared.CatSdk.Symbol.Factory;
-using NageXymSharpApps.Shared.CatSdk.Utils;
+using CatSdk.CryptoTypes;
+using CatSdk.Facade;
+using CatSdk.Symbol;
+using CatSdk.Symbol.Factory;
+using CatSdk.Utils;
 using System.Text;
 
-namespace NageXymSharpApps.Client.SendTransactions
+namespace NageXymSharpApps.Client.Modules
 {
     public class SendTransaction
     {

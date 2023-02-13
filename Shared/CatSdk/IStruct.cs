@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace NageXymSharpApps.Shared.CatSdk
+namespace CatSdk
 {
     public interface IStruct : ISerializer
     {
