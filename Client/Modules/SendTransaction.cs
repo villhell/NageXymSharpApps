@@ -119,55 +119,5 @@ namespace NageXymSharpApps.Client.Modules
             Console.WriteLine(responseDetailsJson);
         }
         #endregion
-
-        #region アドレス情報を取得できるか
-        /// <summary>
-        /// アドレス情報を取得できるか
-        /// </summary>
-        /// <param name="address"></param>
-        /// <param name="client"></param>
-        /// <returns></returns>
-        private async Task<string?> ExistsAddressAsync(string address, HttpClient client)
-        {
-            return null;
-        }
-        #endregion
-
-        #region ネームスペース情報を取得できるか
-        /// <summary>
-        /// ネームスペース情報を取得できるか
-        /// TODO: 返却するのがAddressになってるのは違和感ある
-        /// </summary>
-        /// <param name="ns"></param>
-        /// <param name="client"></param>
-        /// <returns></returns>
-
-        private async Task<string?> ExistsNamespaceAsync(string ns, HttpClient client)
-        {
-            return null;
-        }
-        #endregion
-
-        #region 引数が39文字であるか
-        /// <summary>
-        /// 引数が39文字であるか
-        /// 
-        /// 39文字でなければアドレスではないはず
-        /// 39文字のネームスペースでもExistsNamespaceAsyncで判別できる
-        /// </summary>
-        /// <param name="address"></param>
-        /// <returns></returns>
-        private bool IsAddressLength(string address)
-        {
-            if (!string.IsNullOrEmpty(address))
-            {
-                if (address.Length == 39)
-                {
-                    return true;
-                }
-            }
-            return false;
-        }
-        #endregion
     }
 }

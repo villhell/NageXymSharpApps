@@ -1,5 +1,11 @@
 ﻿@page "/nagexym"
+@using CatSdk.CryptoTypes;
+@using CatSdk.Facade;
+@using CatSdk.Symbol;
+@using CatSdk.Symbol.Factory;
 @using CatSdk.Utils;
+@using NageXymSharpApps.Client.Models;
+@using System.Text;
 @using nagexymsharpweb.Excels;
 @using nagexymsharpweb.Models;
 @using System.ComponentModel
@@ -7,6 +13,7 @@
 @using AntDesign
 @inject IMessageService _message
 @inject HttpClient httpClient
+@inject IJSRuntime JSRuntime
 
 <div>
 
@@ -25,9 +32,16 @@
             <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
         </SpaceItem>
         <SpaceItem>
-            <Text>node url</Text>
-            <Input @bind-Value="@_nodeUrl" />
-            @*<p>value:@_str</p>*@
+            <Paragraph>@_sss.activeName</Paragraph>
+            <Paragraph>@_sss.activeAddress</Paragraph>
+            <Paragraph>@_sss.activeNetworkType</Paragraph>
+            <Paragraph>@_nodeUrl</Paragraph>
+        </SpaceItem>
+        <SpaceItem>
+            <Button type="@ButtonType.Primary" OnClick="@NodeChange_Click">NodeChange</Button>
+        </SpaceItem>
+        <SpaceItem>
+            <Button type="@ButtonType.Primary" OnClick="@Send_Click">Nage XYM!</Button>
         </SpaceItem>
     </Space>
     
@@ -51,19 +65,38 @@
     private string _port = ":3000";
     private string _prefix = "http://";
     private string _nodeUrl = "http://sym-test-01.opening-line.jp:3000";
+    //private string _nodeUrl = string.Empty;
     private string _title = string.Empty;
     private string _subTitle = string.Empty;
     private List<DataItem> datas;
     private List<UploadFileItem> fileList = new List<UploadFileItem>();
     private bool _loading = false;
+    private SssExtention _sss = new SssExtention();
 
-    protected override void OnInitialized()
+    protected override async void OnInitialized()
     {
         base.OnInitialized();
         _title = "nagexymsharp";
         _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
         datas = new List<DataItem>();
+
+        // SSS Extentionを読込む
+        var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./js/sss-extention.js"
+        );
+        _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
+
+        StateHasChanged();
     }
+
+    private async Task NodeChange_Click()
+    {
+        var address = await JSRuntime.InvokeAsync<string>("ThirdPartyLibs.GetActiveAddress");
+        await _message.Info(address);
+
+        _nodeUrl = await JSRuntime.InvokeAsync<string>("ThirdPartyLibs.GetActiveNode", new object[] { _sss.activeNetworkType });
+    }
+
     private async Task UploadFiles(InputFileChangeEventArgs e)
     {
         try
@@ -189,7 +222,7 @@
                 // ネームスペース情報取得成功
                 var address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
                 address = Converter.AddressToString(Converter.HexToBytes(address));
-                
+
                 // 受信制限があるか
                 var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(address, httpClient, _nodeUrl);
                 if (!isRestrictionsAccount)
@@ -202,7 +235,7 @@
                     // 受信制限あり
                     row.Check = "Restricted reception";
                 }
-                
+
                 // row.Check = "OK";
                 row.Namespace = row.Address;
                 row.Address = address;
@@ -211,8 +244,136 @@
 
     }
 
-    private void OnItemChanged()
+    private async Task Send_Click()
     {
-        
+        var network = _sss.activeNetworkType == 104 ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
+        var facade = new SymbolFacade(network);
+        //var privateKey = new PrivateKey(txtPrivateKey.Text);
+        //var keyPair = new KeyPair(privateKey);
+
+        var txs = new List<IBaseTransaction>();
+        // pubを変換
+        var publicKey = new PublicKey(Converter.HexToBytes(_sss.activePublicKey));
+
+        // グリッドの内容からトランザクションを生成
+        foreach(var item in datas)
+        {
+            // Check列未入力の場合
+            if (string.IsNullOrEmpty(item.Check))
+            {
+                await _message.Warning("チェック済みでないデータがあるため処理を中断します。");
+                return;
+            }
+
+            // NGの場合は無視して次の行へ
+            if (string.Equals(item.Check, "NG")) continue;
+
+            // XYMをulongに変換、divisibility分を乗算
+            var xym = (ulong)(item.Xym * 1000000);
+            txs.Add(CreateTransaction(network, publicKey, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
+
+            if(txs.Count > 20)
+            {
+                await AnnounceAsync(network, facade, publicKey, txs, (ulong)1000000);
+                txs.Clear();
+            }
+        }
+
+        // 残ったトランザクションをアナウンス
+        if (txs.Count > 0) await AnnounceAsync(network, facade, publicKey, txs, (ulong)1000000);
     }
+
+    #region トランザクションを作成
+    /// <summary>
+    /// トランザクションを作成
+    /// </summary>
+    /// <param name="network"></param>
+    /// <param name="publicKey"></param>
+    /// <param name="address"></param>
+    /// <param name="xym"></param>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    private EmbeddedTransferTransactionV1 CreateTransaction(Network network, PublicKey publicKey, string address, ulong xym, byte[] message)
+    {
+        var networkType = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET;
+        ulong mosaicId = (ulong)(string.Equals(network.Name, "mainnet") ? 0x6BED913FA20223F8 : 0x72C0212E67A08BCE);
+        return new EmbeddedTransferTransactionV1
+            {
+                Network = networkType,
+                SignerPublicKey = publicKey,
+                RecipientAddress = new UnresolvedAddress(Converter.StringToAddress(address)),
+                Mosaics = new UnresolvedMosaic[]
+                {
+                    new()
+                    {
+                        MosaicId = new UnresolvedMosaicId(mosaicId),
+                        Amount = new Amount(xym)
+                    }
+                },
+                Message = message
+            };
+    }
+    #endregion
+
+    #region トランザクションをアナウンスする
+    /// <summary>
+    /// トランザクションをアナウンスする
+    /// </summary>
+    /// <param name="network"></param>
+    /// <param name="facade"></param>
+    /// <param name="publicKey"></param>
+    /// <param name="txs"></param>
+    /// <returns></returns>
+    private async Task AnnounceAsync(Network network, SymbolFacade facade, PublicKey publicKey, List<IBaseTransaction> txs, ulong feeMultiplier)
+    {
+        var innerTransactions = txs.ToArray();
+
+        var merkleHash = SymbolFacade.HashEmbeddedTransactions(innerTransactions);
+
+        var aggTx = new AggregateCompleteTransactionV2
+        {
+            Network = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET,
+            Transactions = innerTransactions,
+            SignerPublicKey = publicKey,
+            Fee = new Amount(feeMultiplier),
+            TransactionsHash = merkleHash,
+            Deadline = new Timestamp(facade.Network.FromDatetime<NetworkTimestamp>(DateTime.UtcNow).AddHours(2).Timestamp),
+        };
+        //var fee = aggTx.Size * feeMultiplier;
+        //aggTx.Fee = new Amount((ulong)fee);
+        //aggTx.Fee = new Amount((ulong)1000000);
+        //var signature = facade.SignTransaction(keyPair, aggTx);
+        //TransactionsFactory.AttachSignature(aggTx, signature);
+
+        var hash = facade.HashTransaction(aggTx);
+        //var bobCosignature = new Cosignature
+        //{
+        //    Signature = bobKeyPair.Sign(hash.bytes),
+        //    SignerPublicKey = bobKeyPair.PublicKey
+        //};
+        //aggTx.Cosignatures = new[] { bobCosignature };
+
+        var payload = TransactionsFactory.CreatePayload(aggTx);
+
+        //_sss.setTransactionByPayload(payload);
+
+        payload = Converter.BytesToHex(aggTx.Serialize());
+
+        var signedTx = await JSRuntime.InvokeAsync<SignedTransaction>("ThirdPartyLibs.SetTransactionByPayload", new object[] { payload });
+        //var signedTx = await JSRuntime.InvokeAsync<object>("ThirdPartyLibs.RequestSign");
+        
+        var ms = new MemoryStream(Converter.HexToBytes(signedTx.payload));
+        var br = new BinaryReader(ms);
+        aggTx = AggregateCompleteTransactionV2.Deserialize(br);
+
+        payload = TransactionsFactory.CreatePayload(aggTx);
+
+        //string node = Utils.TrimingLastSlash(txtNodeUrl.Text);
+        
+        var content = new StringContent(payload, Encoding.UTF8, "application/json");
+        var response = await httpClient.PutAsync(_nodeUrl + "/transactions", content);
+        var responseDetailsJson = await response.Content.ReadAsStringAsync();
+        Console.WriteLine(responseDetailsJson);
+    }
+    #endregion
 }
