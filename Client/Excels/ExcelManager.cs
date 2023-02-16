@@ -42,7 +42,7 @@ namespace nagexymsharpweb.Excels
                                 var rowdataItem = new DataItem
                                 {
                                     Key = key.ToString(),
-                                    Check = string.Empty,
+                                    Check = string.Empty, 
                                     Name = ws.Cell(row, 1).GetString(),
                                     Twitter = ws.Cell(row, 2).GetString(),
                                     Namespace = string.Empty,
@@ -51,6 +51,9 @@ namespace nagexymsharpweb.Excels
                                     Message = ws.Cell(row, 7).GetString()
                                 };
 
+                                // debug s
+                                rowdataItem.Check = ws.Cell(row, 9).GetString();
+                                // debug e
                                 row++;
                                 key++;
                                 excelRowDataItems.Add(rowdataItem);
