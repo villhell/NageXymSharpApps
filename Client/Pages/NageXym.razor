@@ -20,8 +20,8 @@
 <div>
 
     <h1>@_title</h1>
-    <Space>
-        <SpaceItem>
+    <Space Direction="DirectionVHType.Vertical">
+        <SpaceItem Style="display:flex;margin-left:1px;">
             <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
             <Upload Name="files" FileList="fileList">
             <label class="ant-btn" for="fileInput">
@@ -29,20 +29,19 @@
                 Upload Excel file
             </label>
             </Upload>
-        </SpaceItem>
-        <SpaceItem>
             <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
         </SpaceItem>
-        <SpaceItem>
-            <Paragraph>@_sss.activeName</Paragraph>
-            <Paragraph>@_sss.activeAddress</Paragraph>
-            <Paragraph>@_sss.activeNetworkType</Paragraph>
-            <Paragraph>@_nodeUrl</Paragraph>
+        <SpaceItem Style="display:flex;margin-left:1px;">
+            Node URL: 
+        </SpaceItem>
+        <SpaceItem Style="display:flex;margin-left:1px;">
+            <Input Placeholder="Please Input Node Url (ex: " @bind-Value="@_nodeUrl" OnBlur="@NodeUrl_Change"/>
         </SpaceItem>
         <SpaceItem>
-            <Button type="@ButtonType.Primary" OnClick="@NodeChange_Click">NodeChange</Button>
+            Private Key:
         </SpaceItem>
-        <SpaceItem>
+        <SpaceItem Style="display:flex;margin-left:1px;">
+            <Input Placeholder="Please Input Private Key" @bind-Value="@_privateKey" />
             <Button type="@ButtonType.Primary" OnClick="@Send_Click">Nage XYM!</Button>
         </SpaceItem>
     </Space>
@@ -69,13 +68,14 @@
     private string _port = ":3000";
     private string _prefix = "http://";
     private string _nodeUrl = "http://sym-test-01.opening-line.jp:3000";
-    //private string _nodeUrl = string.Empty;
+    //private string _nodeUrl = "http://160.248.184.223:3000";
+    private string _privateKey = string.Empty;
     private string _title = string.Empty;
     private string _subTitle = string.Empty;
+    private string _network = "unknown";
     private List<DataItem> datas;
     private List<UploadFileItem> fileList = new List<UploadFileItem>();
     private bool _loading = false;
-    private SssExtention _sss = new SssExtention();
 
     protected override async void OnInitialized()
     {
@@ -84,21 +84,12 @@
         _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
         datas = new List<DataItem>();
 
-        // SSS Extentionを読込む
-        var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./js/sss-extention.js"
-        );
-        _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
-
         StateHasChanged();
     }
 
-    private async Task NodeChange_Click()
+    private async Task NodeUrl_Change()
     {
-        var address = await JSRuntime.InvokeAsync<string>("ThirdPartyLibs.GetActiveAddress");
-        await _message.Info(address);
-
-        _nodeUrl = await JSRuntime.InvokeAsync<string>("ThirdPartyLibs.GetActiveNode", new object[] { _sss.activeNetworkType });
+        _nodeUrl = await Utils.GetNetworkInfo(_nodeUrl, httpClient);
     }
 
     private async Task UploadFiles(InputFileChangeEventArgs e)
@@ -250,12 +241,14 @@
 
     private async Task Send_Click()
     {
-        var network = _sss.activeNetworkType == 104 ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
-        var facade = new SymbolFacade(network);
 
+        _nodeUrl = Utils.TrimingLastSlash(_nodeUrl);
+        // debug testnet only
+        var network = 152 == 104 ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
+        var facade = new SymbolFacade(network);
+        var privateKey = new PrivateKey(_privateKey);
+        var keyPair = new KeyPair(privateKey);
         var txs = new List<IBaseTransaction>();
-        // pubを変換
-        var publicKey = new PublicKey(Converter.HexToBytes(_sss.activePublicKey));
 
         // グリッドの内容からトランザクションを生成
         foreach(var item in datas)
@@ -272,17 +265,17 @@
 
             // XYMをulongに変換、divisibility分を乗算
             var xym = (ulong)(item.Xym * 1000000);
-            txs.Add(CreateTransaction(network, publicKey, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
+            txs.Add(CreateTransaction(network, keyPair, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
 
             if(txs.Count > 99)
             {
-                await AnnounceAsync(network, facade, publicKey, txs, (ulong)100);
+                await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
                 txs.Clear();
             }
         }
 
         // 残ったトランザクションをアナウンス
-        if (txs.Count > 0) await AnnounceAsync(network, facade, publicKey, txs, (ulong)100);
+        if (txs.Count > 0) await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
     }
 
     #region トランザクションを作成
@@ -295,14 +288,14 @@
     /// <param name="xym"></param>
     /// <param name="message"></param>
     /// <returns></returns>
-    private EmbeddedTransferTransactionV1 CreateTransaction(Network network, PublicKey publicKey, string address, ulong xym, byte[] message)
+    private EmbeddedTransferTransactionV1 CreateTransaction(Network network, KeyPair keyPair, string address, ulong xym, byte[] message)
     {
         var networkType = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET;
         ulong mosaicId = (ulong)(string.Equals(network.Name, "mainnet") ? 0x6BED913FA20223F8 : 0x72C0212E67A08BCE);
         return new EmbeddedTransferTransactionV1
             {
                 Network = networkType,
-                SignerPublicKey = publicKey,
+                SignerPublicKey = keyPair.PublicKey,
                 RecipientAddress = new UnresolvedAddress(Converter.StringToAddress(address)),
                 Mosaics = new UnresolvedMosaic[]
                 {
@@ -326,7 +319,7 @@
     /// <param name="publicKey"></param>
     /// <param name="txs"></param>
     /// <returns></returns>
-    private async Task AnnounceAsync(Network network, SymbolFacade facade, PublicKey publicKey, List<IBaseTransaction> txs, ulong feeMultiplier)
+    private async Task AnnounceAsync(Network network, SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs, ulong feeMultiplier)
     {
         var innerTransactions = txs.ToArray();
 
@@ -336,7 +329,7 @@
         {
             Network = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET,
             Transactions = innerTransactions,
-            SignerPublicKey = publicKey,
+            SignerPublicKey = keyPair.PublicKey,
             Fee = new Amount(feeMultiplier),
             TransactionsHash = merkleHash,
             Deadline = new Timestamp(facade.Network.FromDatetime<NetworkTimestamp>(DateTime.UtcNow).AddHours(2).Timestamp),
@@ -344,24 +337,22 @@
         var fee = aggTx.Size * feeMultiplier;
         aggTx.Fee = new Amount((ulong)fee);
 
-        // トランザクションのハッシュ生成
-        var hash = facade.HashTransaction(aggTx);
+        var signature = facade.SignTransaction(keyPair, aggTx);
+        TransactionsFactory.AttachSignature(aggTx, signature);
 
-        // ペイロード生成 "0E73...."
-        var payload = Converter.BytesToHex(aggTx.Serialize());
+        var payload = TransactionsFactory.CreatePayload(aggTx);
 
         try
         {
-            // SSS画面にてパスワード入力
-            var signedTx = await JSRuntime.InvokeAsync<SignedTransaction>("ThirdPartyLibs.SetTransactionByPayload", new object[] { payload });
+            
 
-            // サイン済みのペイロードからアグリゲートコンプリートトランザクション生成
-            var ms = new MemoryStream(Converter.HexToBytes(signedTx.payload));
-            var br = new BinaryReader(ms);
-            aggTx = AggregateCompleteTransactionV2.Deserialize(br);
+            //// サイン済みのペイロードからアグリゲートコンプリートトランザクション生成
+            //var ms = new MemoryStream(Converter.HexToBytes(signedTx.payload));
+            //var br = new BinaryReader(ms);
+            //aggTx = AggregateCompleteTransactionV2.Deserialize(br);
 
-            // ペイロードを生成{ "payload" : "0E73...."}
-            payload = TransactionsFactory.CreatePayload(aggTx);
+            //// ペイロードを生成{ "payload" : "0E73...."}
+            //payload = TransactionsFactory.CreatePayload(aggTx);
 
             var content = new StringContent(payload, Encoding.UTF8, "application/json");
             var response = await httpClient.PutAsync(_nodeUrl + "/transactions", content);
@@ -383,4 +374,6 @@
         }
     }
     #endregion
+
+
 }

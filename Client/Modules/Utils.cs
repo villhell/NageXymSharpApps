@@ -3,6 +3,8 @@ using System.Text;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json;
 using NageXymSharpApps.Client.Models;
+using Newtonsoft.Json.Linq;
+using System.Net.Http;
 
 namespace NageXymSharpApps.Client.Modules
 {
@@ -163,6 +165,58 @@ namespace NageXymSharpApps.Client.Modules
                 return false;
             }
 
+            return ret;
+        }
+        #endregion
+
+        #region ノードのネットワークとアドレスのネットワークが一致しているか
+        /// <summary>
+        /// ノードのネットワークとアドレスのネットワークが一致しているか
+        /// </summary>
+        /// <returns></returns>
+        internal async static Task<bool> EqualsNetwork(string nodeUrl, string txtNetwork, HttpClient client)
+        {
+            try
+            {
+                var networkName = await GetNetworkInfo(nodeUrl, client);
+
+                if (string.Equals(networkName, txtNetwork))
+                {
+                    return true;
+                }
+
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+            return false;
+        }
+        #endregion
+
+        #region ノードのネットワーク情報を取得
+        /// <summary>
+        /// ノードのネットワーク情報を取得
+        /// </summary>
+        /// <returns></returns>
+        internal async static Task<string> GetNetworkInfo(string nodeUrl, HttpClient client)
+        {
+            var ret = "unknown";
+            try
+            {
+                var networkResult = await client.GetAsync(nodeUrl + "/network");
+                var content = await networkResult.Content.ReadAsStringAsync();
+                var networkResponse = JsonConvert.DeserializeObject<NetworkResponse>(content);
+
+                if (string.IsNullOrEmpty(networkResponse!.Name))
+                {
+                    return networkResponse!.Name;
+                }
+            }
+            catch (Exception)
+            {
+                return ret;
+            }
             return ret;
         }
         #endregion
