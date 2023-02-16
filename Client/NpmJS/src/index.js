@@ -1,17 +1,13 @@
 ﻿import { getActiveNode } from "symbol-node-util";
-import { SSSWindow, setTransactionByPayload, requestSign, getActiveAddress } from "sss-module";
+import { SSSWindwo, setTransactionByPayload, requestSign, getActiveAddress } from "sss-module";
 
 export async function GetActiveNode(network) {
     return await getActiveNode(network);
 }
 
-export async function SetTransactionByPayload(payload) {
+export function SetTransactionByPayload(payload) {
     setTransactionByPayload(payload);
-    return await requestSign();
-}
-
-export async function RequestSign() {
-    return await requestSign();
+    return requestSign();
 }
 
 export function GetActiveAddress() {

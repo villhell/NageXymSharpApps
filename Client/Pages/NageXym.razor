@@ -15,6 +15,8 @@
 @inject HttpClient httpClient
 @inject IJSRuntime JSRuntime
 
+@inject NotificationService _notice
+
 <div>
 
     <h1>@_title</h1>
@@ -62,6 +64,8 @@
 
 
 @code {
+
+
     private string _port = ":3000";
     private string _prefix = "http://";
     private string _nodeUrl = "http://sym-test-01.opening-line.jp:3000";
@@ -248,8 +252,6 @@
     {
         var network = _sss.activeNetworkType == 104 ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
         var facade = new SymbolFacade(network);
-        //var privateKey = new PrivateKey(txtPrivateKey.Text);
-        //var keyPair = new KeyPair(privateKey);
 
         var txs = new List<IBaseTransaction>();
         // pubを変換
@@ -272,15 +274,15 @@
             var xym = (ulong)(item.Xym * 1000000);
             txs.Add(CreateTransaction(network, publicKey, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
 
-            if(txs.Count > 20)
+            if(txs.Count > 99)
             {
-                await AnnounceAsync(network, facade, publicKey, txs, (ulong)1000000);
+                await AnnounceAsync(network, facade, publicKey, txs, (ulong)100);
                 txs.Clear();
             }
         }
 
         // 残ったトランザクションをアナウンス
-        if (txs.Count > 0) await AnnounceAsync(network, facade, publicKey, txs, (ulong)1000000);
+        if (txs.Count > 0) await AnnounceAsync(network, facade, publicKey, txs, (ulong)100);
     }
 
     #region トランザクションを作成
@@ -339,41 +341,46 @@
             TransactionsHash = merkleHash,
             Deadline = new Timestamp(facade.Network.FromDatetime<NetworkTimestamp>(DateTime.UtcNow).AddHours(2).Timestamp),
         };
-        //var fee = aggTx.Size * feeMultiplier;
-        //aggTx.Fee = new Amount((ulong)fee);
-        //aggTx.Fee = new Amount((ulong)1000000);
-        //var signature = facade.SignTransaction(keyPair, aggTx);
-        //TransactionsFactory.AttachSignature(aggTx, signature);
+        var fee = aggTx.Size * feeMultiplier;
+        aggTx.Fee = new Amount((ulong)fee);
 
+        // トランザクションのハッシュ生成
         var hash = facade.HashTransaction(aggTx);
-        //var bobCosignature = new Cosignature
-        //{
-        //    Signature = bobKeyPair.Sign(hash.bytes),
-        //    SignerPublicKey = bobKeyPair.PublicKey
-        //};
-        //aggTx.Cosignatures = new[] { bobCosignature };
 
-        var payload = TransactionsFactory.CreatePayload(aggTx);
+        // ペイロード生成 "0E73...."
+        var payload = Converter.BytesToHex(aggTx.Serialize());
 
-        //_sss.setTransactionByPayload(payload);
+        try
+        {
+            // SSS画面にてパスワード入力
+            var signedTx = await JSRuntime.InvokeAsync<SignedTransaction>("ThirdPartyLibs.SetTransactionByPayload", new object[] { payload });
 
-        payload = Converter.BytesToHex(aggTx.Serialize());
+            // サイン済みのペイロードからアグリゲートコンプリートトランザクション生成
+            var ms = new MemoryStream(Converter.HexToBytes(signedTx.payload));
+            var br = new BinaryReader(ms);
+            aggTx = AggregateCompleteTransactionV2.Deserialize(br);
 
-        var signedTx = await JSRuntime.InvokeAsync<SignedTransaction>("ThirdPartyLibs.SetTransactionByPayload", new object[] { payload });
-        //var signedTx = await JSRuntime.InvokeAsync<object>("ThirdPartyLibs.RequestSign");
-        
-        var ms = new MemoryStream(Converter.HexToBytes(signedTx.payload));
-        var br = new BinaryReader(ms);
-        aggTx = AggregateCompleteTransactionV2.Deserialize(br);
+            // ペイロードを生成{ "payload" : "0E73...."}
+            payload = TransactionsFactory.CreatePayload(aggTx);
 
-        payload = TransactionsFactory.CreatePayload(aggTx);
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await httpClient.PutAsync(_nodeUrl + "/transactions", content);
+            var responseDetailsJson = await response.Content.ReadAsStringAsync();
+            Console.WriteLine(responseDetailsJson);
 
-        //string node = Utils.TrimingLastSlash(txtNodeUrl.Text);
-        
-        var content = new StringContent(payload, Encoding.UTF8, "application/json");
-        var response = await httpClient.PutAsync(_nodeUrl + "/transactions", content);
-        var responseDetailsJson = await response.Content.ReadAsStringAsync();
-        Console.WriteLine(responseDetailsJson);
+        }
+        catch (Exception ex)
+        {
+            await _notice.Open(new NotificationConfig()
+            {
+                Message = "ERROR",
+                Description = ex.Message
+            });
+        }
+        finally
+        {
+            await Task.Delay(4000);
+        }
     }
     #endregion
 }
