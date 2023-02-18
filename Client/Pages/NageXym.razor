@@ -1,9 +1,10 @@
-﻿@page "/nagexym"
+﻿@page "/"
 @using CatSdk.CryptoTypes;
 @using CatSdk.Facade;
 @using CatSdk.Symbol;
 @using CatSdk.Symbol.Factory;
 @using CatSdk.Utils;
+@using NageXymSharpApps.Client.Components
 @using NageXymSharpApps.Client.Models;
 @using System.Text;
 @using nagexymsharpweb.Excels;
@@ -18,80 +19,129 @@
 @inject NotificationService _notice
 
 <div>
+    <Row Justify="start">
+        <h2>@_title</h2>
+    </Row>
+    <Row Justify="start">
+        <Paragraph Style="font-size:0.8rem;">Excelに記載されたアドレスに対してまとめて投げXYMを行うためのツールです。
+            <br /> 1 から 3 STEPを順番に行うことで簡単に多人数に投げXYMすることができます。
+            <br /><br />読込を行うExcelファイルはSYMBOLタウンリストのフォーマットを想定しています。
+            <br />
+            <a href="https://docs.google.com/spreadsheets/d/1X2AsmEOXpMlwZ9r6yA-2sqEfTBpFnst_nF1nXhZjLCk/edit#gid=0">SYMBOLタウンリストのリンクはこちら</a>
+            <br /><br />
+            さっそく始めてみましょう！
+        </Paragraph>
+    </Row>
+    <div class="card-container">
+        <Tabs @bind-ActiveKey="@_activeKey" Type="@TabType.Card" Style="margin-bottom:60px;">
+            <TabPane Tab="Step 1" Key="1">
+                <div style="display:flex;align-items: baseline;">
+                    <Paragraph Style="font-size:1rem;font-weight:bold;">１．Excelファイルを読込みます。</Paragraph>
+                </div>
+                <Paragraph Style="font-size:0.8rem;margin-left:10px;margin-top:0px;">※SYMBOLタウンリストを使用する場合はExcelファイルから画像を削除した状態で読込みを行って下さい。</Paragraph>
+                <InputFile id="fileInput" OnChange="@UploadFiles" hidden />
+                <Upload Name="files" FileList="fileList">
+                    <label class="ant-btn ant-btn-primary" for="fileInput">
+                        <Icon Type="upload" />
+                        Excel読込
+                    </label>
+                </Upload>
+            </TabPane>
+            <TabPane Tab="Step 2" Key="2">
+                <div style="display:flex;align-items: baseline;">
+                <Paragraph Style="font-size:1rem;font-weight:bold;">２．Node URLを入力し、Checkボタンを押してアドレス/ネームスペースに対して送金できるかチェックします。</Paragraph>
+                </div>
+                <div style="margin-bottom: 5px;">
+                    <Paragraph Style="font-size:0.8rem;margin:0px;">Node URL:</Paragraph><Input Placeholder="Please Input Node Url (ex: " @bind-Value="@_nodeUrl" />
+                </div>
+                <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
+            </TabPane>
+            <TabPane Tab="Step 3" Key="3">
+                <div style="display:flex;align-items: baseline;">
+                <Paragraph Style="font-size:1rem;font-weight:bold;"> ３．Private Keyを入力してNage XYMボタンを押して下さい。</Paragraph>
+                </div>
 
-    <h1>@_title</h1>
-    <Space Direction="DirectionVHType.Vertical">
-        <SpaceItem Style="display:flex;margin-left:1px;">
-            <InputFile id="fileInput" OnChange="@UploadFiles" hidden multiple />
-            <Upload Name="files" FileList="fileList">
-            <label class="ant-btn" for="fileInput">
-                <Icon Type="upload" />
-                Upload Excel file
-            </label>
-            </Upload>
-            <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
-        </SpaceItem>
-        <SpaceItem Style="display:flex;margin-left:1px;">
-            Node URL: 
-        </SpaceItem>
-        <SpaceItem Style="display:flex;margin-left:1px;">
-            <Input Placeholder="Please Input Node Url (ex: " @bind-Value="@_nodeUrl" OnBlur="@NodeUrl_Change"/>
-        </SpaceItem>
-        <SpaceItem>
-            Private Key:
-        </SpaceItem>
-        <SpaceItem Style="display:flex;margin-left:1px;">
-            <Input Placeholder="Please Input Private Key" @bind-Value="@_privateKey" />
-            <Button type="@ButtonType.Primary" OnClick="@Send_Click">Nage XYM!</Button>
-        </SpaceItem>
-    </Space>
-    
-    <Divider></Divider>
-
-    <Table
-        DataSource="@datas"
-        PageSize="100"
-        Loading=_loading
-        Bordered>
-        <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
-        <PropertyColumn Property="c=>c.Name"></PropertyColumn>
-        <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
-        <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
-        <PropertyColumn Property="c=>c.Address"></PropertyColumn>
-    </Table>
+                <div style="margin-bottom: 5px;">
+                    <Paragraph Style="font-size:0.8rem;margin:0px;">Private Key:</Paragraph><Input Placeholder="Please Input Private Key" @bind-Value="@_privateKey" />
+                </div>
+                <div>
+                    <Button type="@ButtonType.Primary" OnClick="@Send_Click">Nage XYM!</Button>
+                </div>
+            </TabPane>
+        </Tabs>
+    </div>
+    <div class="card-container">
+        <Table
+            DataSource="@datas"
+            PageSize="100"
+            Loading=_loading
+            Bordered>
+            <PropertyColumn Property="c=>c.Check" ></PropertyColumn>
+            <PropertyColumn Property="c=>c.Name"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Address"></PropertyColumn>
+        </Table>
+    </div>
 </div>
 
+<style>
+    [data-theme='compact'] .card-container .ant-tabs-card .ant-tabs-content,
+    .card-container .ant-tabs-card .ant-tabs-content {
+        height: 120px;
+        margin-top: -16px;
+    }
+
+    [data-theme='compact'] .card-container .ant-tabs-card .ant-tabs-content .ant-tabs-tabpane,
+    .card-container .ant-tabs-card .ant-tabs-content .ant-tabs-tabpane {
+        background: #fff;
+        padding: 16px;
+    }
+
+    [data-theme='compact'] .card-container .ant-tabs-card .ant-tabs-bar,
+    .card-container .ant-tabs-card .ant-tabs-bar {
+        border-color: #fff;
+    }
+
+    [data-theme='compact'] .card-container .ant-tabs-card .ant-tabs-bar .ant-tabs-tab,
+    .card-container .ant-tabs-card .ant-tabs-bar .ant-tabs-tab {
+        border-color: transparent;
+        background: transparent;
+    }
+
+    [data-theme='compact'] .card-container .ant-tabs-card .ant-tabs-bar .ant-tabs-tab-active,
+    .card-container .ant-tabs-card .ant-tabs-bar .ant-tabs-tab-active {
+        border-color: #fff;
+        background: #fff;
+    }
+</style>
 
 @code {
-
-
-    private string _port = ":3000";
-    private string _prefix = "http://";
-    private string _nodeUrl = "http://sym-test-01.opening-line.jp:3000";
-    //private string _nodeUrl = "http://160.248.184.223:3000";
+    private string _activeKey { get; set; } = "1";
+    private string _nodeUrl = "http://160.248.184.223:3000";
     private string _privateKey = string.Empty;
     private string _title = string.Empty;
     private string _subTitle = string.Empty;
-    private string _network = "unknown";
     private List<DataItem> datas;
     private List<UploadFileItem> fileList = new List<UploadFileItem>();
     private bool _loading = false;
 
-    protected override async void OnInitialized()
+    protected override void OnInitialized()
     {
         base.OnInitialized();
-        _title = "nagexymsharp";
+        _title = "Nage XYM Sharp";
         _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
         datas = new List<DataItem>();
 
         StateHasChanged();
     }
 
-    private async Task NodeUrl_Change()
-    {
-        _nodeUrl = await Utils.GetNetworkInfo(_nodeUrl, httpClient);
-    }
-
+    #region Excelファイル読込み
+    /// <summary>
+    /// Excelファイル読込み
+    /// </summary>
+    /// <param name="e"></param>
+    /// <returns></returns>
     private async Task UploadFiles(InputFileChangeEventArgs e)
     {
         try
@@ -120,6 +170,7 @@
 
             // ローディング開始
             _loading = true;
+
             StateHasChanged();
 
             var config = new MessageConfig
@@ -154,7 +205,9 @@
             StateHasChanged();
         }
     }
+    #endregion
 
+    #region 一覧に表示されたアドレス/ネームスペースをチェックする
     /// <summary>
     /// 一覧に表示されたアドレス/ネームスペースをチェックする
     /// </summary>
@@ -174,109 +227,156 @@
             return;
         }
 
-        // グリッドを一行ずつ読んでいく
-        foreach(var row in datas)
+        try
         {
-            StateHasChanged();
-
-            // アドレス欄が空白
-            if (string.IsNullOrEmpty(row.Address))
+            // ローディング開始
+            var config = new MessageConfig
             {
-                // NGを設定して次の行へ
-                row.Check = "NG";
-                continue;
+                Content = "Checking...",
+            };
+            await _message.Loading(config);
+
+            // グリッドを一行ずつ読んでいく
+            foreach(var row in datas)
+            {
+                // CheckがOKならスキップ
+                if (string.Equals(row.Check, "OK")) continue;
+
+                StateHasChanged();
+
+                // アドレス欄が空白
+                if (string.IsNullOrEmpty(row.Address))
+                {
+                    // NGを設定して次の行へ
+                    row.Check = "NG";
+                    continue;
+                }
+
+                // アドレス情報取得
+                var addressResponse = await Utils.GetAddressAsync(row.Address, httpClient, _nodeUrl);
+                if (addressResponse != null)
+                {
+                    // アドレス情報取得成功
+
+                    // 受信制限があるか
+                    var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(row.Address, httpClient, _nodeUrl);
+                    if (!isRestrictionsAccount)
+                    {
+                        // 受信制限なし
+                        row.Check = "OK";
+                    }
+                    else
+                    {
+                        // 受信制限あり
+                        row.Check = "Restricted reception";
+                    }
+
+                    // 次の行へ
+                    continue;
+                }
+
+                // アドレス情報が取得できなければネームスペース情報を取得
+                var namespaceResponse = await Utils.GetNamespaceAsync(row.Address, httpClient, _nodeUrl);
+                if(namespaceResponse != null)
+                {
+                    // ネームスペース情報取得成功
+                    var address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
+                    address = Converter.AddressToString(Converter.HexToBytes(address));
+
+                    // 受信制限があるか
+                    var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(address, httpClient, _nodeUrl);
+                    if (!isRestrictionsAccount)
+                    {
+                        // 受信制限なし
+                        row.Check = "OK";
+                    }
+                    else
+                    {
+                        // 受信制限あり
+                        row.Check = "Restricted reception";
+                    }
+
+                    // row.Check = "OK";
+                    row.Namespace = row.Address;
+                    row.Address = address;
+                }
             }
 
-            // アドレス情報取得
-            var addressResponse = await Utils.GetAddressAsync(row.Address, httpClient, _nodeUrl);
-            if (addressResponse != null)
+            config = new MessageConfig
             {
-                // アドレス情報取得成功
-
-                // 受信制限があるか
-                var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(row.Address, httpClient, _nodeUrl);
-                if (!isRestrictionsAccount)
-                {
-                    // 受信制限なし
-                    row.Check = "OK";
-                }
-                else
-                {
-                    // 受信制限あり
-                    row.Check = "Restricted reception";
-                }
-
-                // 次の行へ
-                continue;
-            }
-
-            // アドレス情報が取得できなければネームスペース情報を取得
-            var namespaceResponse = await Utils.GetNamespaceAsync(row.Address, httpClient, _nodeUrl);
-            if(namespaceResponse != null)
-            {
-                // ネームスペース情報取得成功
-                var address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
-                address = Converter.AddressToString(Converter.HexToBytes(address));
-
-                // 受信制限があるか
-                var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(address, httpClient, _nodeUrl);
-                if (!isRestrictionsAccount)
-                {
-                    // 受信制限なし
-                    row.Check = "OK";
-                }
-                else
-                {
-                    // 受信制限あり
-                    row.Check = "Restricted reception";
-                }
-
-                // row.Check = "OK";
-                row.Namespace = row.Address;
-                row.Address = address;
-            }
+                Content = "Complete!",
+                Duration = 2,
+            };
+            await _message.Success(config);
         }
-
+        catch(Exception ex)
+        {
+            await _message.Error(ex.Message);
+        }
+        finally
+        {
+            // ローディング終了
+            _loading = false;
+            StateHasChanged();
+        }
     }
+    #endregion
 
+    #region Nage XYMボタンクリック
+    /// <summary>
+    /// Nage XYMボタンクリック
+    /// </summary>
+    /// <returns></returns>
     private async Task Send_Click()
     {
-
         _nodeUrl = Utils.TrimingLastSlash(_nodeUrl);
-        // debug testnet only
-        var network = 152 == 104 ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
+
+        var networkName = await Utils.GetNetworkInfo(_nodeUrl, httpClient);
+        var network = string.Equals(networkName, "mainnet") ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
         var facade = new SymbolFacade(network);
         var privateKey = new PrivateKey(_privateKey);
         var keyPair = new KeyPair(privateKey);
         var txs = new List<IBaseTransaction>();
 
-        // グリッドの内容からトランザクションを生成
-        foreach(var item in datas)
+        try
         {
-            // Check列未入力の場合
-            if (string.IsNullOrEmpty(item.Check))
+            // グリッドの内容からトランザクションを生成
+            foreach(var item in datas)
             {
-                await _message.Warning("チェック済みでないデータがあるため処理を中断します。");
-                return;
+                // Check列未入力の場合
+                if (string.IsNullOrEmpty(item.Check))
+                {
+                    await _message.Warning("チェック済みでないデータがあるため処理を中断します。");
+                    return;
+                }
+
+                // NGの場合は無視して次の行へ
+                if (string.Equals(item.Check, "NG")) continue;
+
+                // XYMをulongに変換、divisibility分を乗算
+                var xym = (ulong)(item.Xym * 1000000);
+                txs.Add(CreateTransaction(network, keyPair, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
+
+                if(txs.Count > 99)
+                {
+                    await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
+                    txs.Clear();
+                }
             }
 
-            // NGの場合は無視して次の行へ
-            if (string.Equals(item.Check, "NG")) continue;
-
-            // XYMをulongに変換、divisibility分を乗算
-            var xym = (ulong)(item.Xym * 1000000);
-            txs.Add(CreateTransaction(network, keyPair, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
-
-            if(txs.Count > 99)
-            {
-                await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
-                txs.Clear();
-            }
+            // 残ったトランザクションをアナウンス
+            if (txs.Count > 0) await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
         }
+        catch(Exception ex)
+        {
+            await _message.Error(ex.Message);
+        }
+        finally
+        {
 
-        // 残ったトランザクションをアナウンス
-        if (txs.Count > 0) await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
+        }
     }
+    #endregion
 
     #region トランザクションを作成
     /// <summary>
@@ -340,24 +440,16 @@
         var signature = facade.SignTransaction(keyPair, aggTx);
         TransactionsFactory.AttachSignature(aggTx, signature);
 
+        var hash = facade.HashTransaction(aggTx);
         var payload = TransactionsFactory.CreatePayload(aggTx);
-
+        Console.WriteLine(hash.ToString());
         try
         {
-            
+            // トランザクションをアナウンス
+            var responseDetailJson = await Utils.AnnounceTransactionAsync(payload, _nodeUrl, httpClient);
 
-            //// サイン済みのペイロードからアグリゲートコンプリートトランザクション生成
-            //var ms = new MemoryStream(Converter.HexToBytes(signedTx.payload));
-            //var br = new BinaryReader(ms);
-            //aggTx = AggregateCompleteTransactionV2.Deserialize(br);
-
-            //// ペイロードを生成{ "payload" : "0E73...."}
-            //payload = TransactionsFactory.CreatePayload(aggTx);
-
-            var content = new StringContent(payload, Encoding.UTF8, "application/json");
-            var response = await httpClient.PutAsync(_nodeUrl + "/transactions", content);
-            var responseDetailsJson = await response.Content.ReadAsStringAsync();
-            Console.WriteLine(responseDetailsJson);
+            // Messageがなければエラー。もしくはデシリアライズに失敗した場合もエラー
+            Console.WriteLine(responseDetailJson.Message);
 
         }
         catch (Exception ex)

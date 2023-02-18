@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using NageXymSharpApps.Client.Models;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
+using AntDesign;
 
 namespace NageXymSharpApps.Client.Modules
 {
@@ -218,6 +219,17 @@ namespace NageXymSharpApps.Client.Modules
                 return ret;
             }
             return ret;
+        }
+        #endregion
+
+        #region トランザクションをアナウンスする
+        internal async static Task<TransactionAnnounceResponse> AnnounceTransactionAsync(string payload, string nodeUrl, HttpClient httpClient)
+        {
+            var content = new StringContent(payload, Encoding.UTF8, "application/json");
+            var response = await httpClient.PutAsync(nodeUrl + "/transactions", content);
+            var responseDetailsJson = await response.Content.ReadAsStringAsync();
+            var announceResponse = JsonConvert.DeserializeObject<TransactionAnnounceResponse>(responseDetailsJson);
+            return announceResponse;
         }
         #endregion
     }
