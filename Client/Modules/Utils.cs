@@ -6,11 +6,13 @@ using NageXymSharpApps.Client.Models;
 using Newtonsoft.Json.Linq;
 using System.Net.Http;
 using AntDesign;
+using System.Transactions;
 
 namespace NageXymSharpApps.Client.Modules
 {
     internal class Utils
     {
+        #region 文字列からNamespaceIdに変換する。
         /// <summary>
         /// 文字列からNamespaceIdに変換する。
         /// </summary>
@@ -36,7 +38,9 @@ namespace NageXymSharpApps.Client.Modules
 
             return namespaceId;
         }
+        #endregion
 
+        #region 末尾のスラッシュを削除する
         /// <summary>
         /// 末尾のスラッシュを削除する
         /// </summary>
@@ -46,24 +50,27 @@ namespace NageXymSharpApps.Client.Modules
         {
             return s.Trim('/');
         }
+        #endregion
 
+        #region 文字数が指定数と一致するか
         /// <summary>
-        /// アドレスかどうか
+        /// 文字数が指定数と一致するか
         /// </summary>
-        /// <param name="address"></param>
+        /// <param name="str"></param>
         /// <returns></returns>
-        internal static bool CheckAddress(string address)
+        internal static bool CheckWordCount(string str, int count)
         {
-            if (!string.IsNullOrEmpty(address))
+            if (!string.IsNullOrEmpty(str))
             {
-                // 39文字ならアドレスの可能性がある
-                if (address.Length == 39)
+                // 文字数が一致
+                if (str.Length == count)
                 {
                     return true;
                 }
             }
             return false;
         }
+        #endregion
 
         #region アドレス情報を取得
         /// <summary>
@@ -79,7 +86,7 @@ namespace NageXymSharpApps.Client.Modules
             try
             {
                 // アドレスの文字列かどうか
-                if (CheckAddress(address))
+                if (CheckWordCount(address, 39))
                 {
                     var accountResult = await client.GetAsync(string.Format("{0}/accounts/{1}", node, address));
                     var content = await accountResult.Content.ReadAsStringAsync();
@@ -88,16 +95,6 @@ namespace NageXymSharpApps.Client.Modules
                     if (ret!.Account == null)
                     {
                         return null;
-                    }
-                    else
-                    {
-                        // 受信制限があるか
-                        var restrictionsAccountResponse = await client.GetAsync(string.Format("{0}/restrictions/account/{1}", node, address));
-                        content = await accountResult.Content.ReadAsStringAsync();
-                        var restrictRet = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(content);
-                        
-                        // 受信制限なしならアドレス情報を返す。そうでなければnullを返す
-                        return string.Equals(restrictRet!.Code, "ResourceNotFound") ? null : ret;
                     }
                 }
                 return ret;
@@ -152,12 +149,12 @@ namespace NageXymSharpApps.Client.Modules
 
             try
             {
-                var restrictionsAccountResult = await client.GetAsync(string.Format("{0}/restrictions/account/{1}", node, address));
+                var restrictionsAccountResult = await client.GetAsync(string.Format("{0}/restrictions/account?address={1}", node, address));
                 var content = await restrictionsAccountResult.Content.ReadAsStringAsync();
                 var restrictionsAccount = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(content);
 
                 // 受信制限なし
-                if (string.Equals(restrictionsAccount!.Code, "ResourceNotFound")) ret = false;
+                if (restrictionsAccount!.Data.Count == 0) ret = false;
                 else ret = true;
             }
             catch (Exception)
@@ -179,9 +176,9 @@ namespace NageXymSharpApps.Client.Modules
         {
             try
             {
-                var networkName = await GetNetworkInfo(nodeUrl, client);
+                var networkInfo = await GetNetworkInfo(nodeUrl, client);
 
-                if (string.Equals(networkName, txtNetwork))
+                if (string.Equals(networkInfo!.Name, txtNetwork))
                 {
                     return true;
                 }
@@ -200,18 +197,18 @@ namespace NageXymSharpApps.Client.Modules
         /// ノードのネットワーク情報を取得
         /// </summary>
         /// <returns></returns>
-        internal async static Task<string> GetNetworkInfo(string nodeUrl, HttpClient client)
+        internal async static Task<NetworkResponse> GetNetworkInfo(string nodeUrl, HttpClient client)
         {
-            var ret = "unknown";
+            NetworkResponse ret = null;
             try
             {
                 var networkResult = await client.GetAsync(nodeUrl + "/network");
                 var content = await networkResult.Content.ReadAsStringAsync();
                 var networkResponse = JsonConvert.DeserializeObject<NetworkResponse>(content);
 
-                if (string.IsNullOrEmpty(networkResponse!.Name))
+                if (!string.IsNullOrEmpty(networkResponse!.Name))
                 {
-                    return networkResponse!.Name;
+                    return networkResponse;
                 }
             }
             catch (Exception)
@@ -222,7 +219,46 @@ namespace NageXymSharpApps.Client.Modules
         }
         #endregion
 
+        #region 手数料情報を取得
+        /// <summary>
+        /// 手数料情報を取得
+        /// </summary>
+        /// <param name="nodeUrl"></param>
+        /// <param name="client"></param>
+        /// <returns></returns>
+        internal async static Task<TransactionFeeResponse> GetTransactionFee(string nodeUrl, HttpClient client)
+        {
+            TransactionFeeResponse ret = null;
+            try
+            {
+                var feeResult = await client.GetAsync(nodeUrl + "/network/fees/transaction");
+                var content = await feeResult.Content.ReadAsStringAsync();
+                ret = JsonConvert.DeserializeObject<TransactionFeeResponse>(content);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex.Message);
+            }
+            return ret;
+        }
+        #endregion
+
+        #region 手数料を計算する
+        
+        internal static int CalcFee(int minFeeMultiplier, int averageFeeMultiplier)
+        {
+            return (int)Math.Round(minFeeMultiplier + averageFeeMultiplier * 0.65, MidpointRounding.AwayFromZero);
+        }
+        #endregion
+
         #region トランザクションをアナウンスする
+        /// <summary>
+        /// トランザクションをアナウンスする
+        /// </summary>
+        /// <param name="payload"></param>
+        /// <param name="nodeUrl"></param>
+        /// <param name="httpClient"></param>
+        /// <returns></returns>
         internal async static Task<TransactionAnnounceResponse> AnnounceTransactionAsync(string payload, string nodeUrl, HttpClient httpClient)
         {
             var content = new StringContent(payload, Encoding.UTF8, "application/json");

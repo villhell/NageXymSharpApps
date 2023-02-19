@@ -125,7 +125,7 @@
 
 @code {
     private string _activeKey { get; set; } = "1";
-    private string _nodeUrl = "http://160.248.184.223:3000";
+    private string _nodeUrl = "";
     private string _privateKey = string.Empty;
     private string _title = string.Empty;
     private string _subTitle = string.Empty;
@@ -220,6 +220,15 @@
     /// </summary>
     private async Task Check_Click()
     {
+        _nodeUrl = Utils.TrimingLastSlash(_nodeUrl);
+
+        // Azureでデプロイするとhttpsになるので3000は使えない
+        var port = new Uri(_nodeUrl).Port;
+        if(port != 3001)
+        {
+            await _message.Warning("ポート3001に対応したノードを指定して下さい。");
+            return;
+        }
         // 一覧に何も表示されていなければ以降の処理を行わない
         if (datas.Count == 0)
         {
@@ -241,8 +250,6 @@
             var config = new MessageConfig
             {
                 Content = "Checking...",
-                Duration = null,
-                Key = key
             };
             await _message.Loading(config);
 
@@ -315,11 +322,12 @@
             }
 
             StateHasChanged();
-            
-            config.Content = "Complete!";
-            config.Duration = 2;
-        
-            await _message.Success(config);
+
+            await _message.Success(new MessageConfig
+            {
+                Content = "Complete!",
+                Duration = 2
+            });
         }
         catch(Exception ex)
         {
@@ -343,15 +351,24 @@
     {
         _nodeUrl = Utils.TrimingLastSlash(_nodeUrl);
 
-        var networkName = await Utils.GetNetworkInfo(_nodeUrl, httpClient);
-        var network = string.Equals(networkName, "mainnet") ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
-        var facade = new SymbolFacade(network);
-        var privateKey = new PrivateKey(_privateKey);
-        var keyPair = new KeyPair(privateKey);
-        var txs = new List<IBaseTransaction>();
-
         try
         {
+            // ネットワーク情報を取得
+            var networkInfo = await Utils.GetNetworkInfo(_nodeUrl, httpClient);
+
+            // ネットワーク情報が正しく取得できなかった
+            if(networkInfo == null)
+            {
+                await _message.Warning("ネットワーク情報が取得できませんでした。処理を中断します。");
+                return;
+            }
+
+            var network = string.Equals(networkInfo!.Name, "mainnet") ? CatSdk.Symbol.Network.MainNet : CatSdk.Symbol.Network.TestNet;
+            var facade = new SymbolFacade(network);
+            var privateKey = new PrivateKey(_privateKey);
+            var keyPair = new KeyPair(privateKey);
+            var txs = new List<IBaseTransaction>();
+
             // グリッドの内容からトランザクションを生成
             foreach(var item in datas)
             {
@@ -371,13 +388,13 @@
 
                 if(txs.Count > 99)
                 {
-                    await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
+                    await AnnounceAsync(network, facade, keyPair, txs);
                     txs.Clear();
                 }
             }
 
             // 残ったトランザクションをアナウンス
-            if (txs.Count > 0) await AnnounceAsync(network, facade, keyPair, txs, (ulong)100);
+            if (txs.Count > 0) await AnnounceAsync(network, facade, keyPair, txs);
         }
         catch(Exception ex)
         {
@@ -431,18 +448,22 @@
     /// <param name="publicKey"></param>
     /// <param name="txs"></param>
     /// <returns></returns>
-    private async Task AnnounceAsync(Network network, SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs, ulong feeMultiplier)
+    private async Task AnnounceAsync(Network network, SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs)
     {
         var innerTransactions = txs.ToArray();
 
         var merkleHash = SymbolFacade.HashEmbeddedTransactions(innerTransactions);
+
+        // 手数料を取得
+        var feeInfo = await Utils.GetTransactionFee(_nodeUrl, httpClient);
+        var feeMultiplier = Utils.CalcFee(feeInfo.MinFeeMultiplier, feeInfo.AverageFeeMultiplier);
 
         var aggTx = new AggregateCompleteTransactionV2
         {
             Network = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET,
             Transactions = innerTransactions,
             SignerPublicKey = keyPair.PublicKey,
-            Fee = new Amount(feeMultiplier),
+            //Fee = new Amount(feeMultiplier),
             TransactionsHash = merkleHash,
             Deadline = new Timestamp(facade.Network.FromDatetime<NetworkTimestamp>(DateTime.UtcNow).AddHours(2).Timestamp),
         };
