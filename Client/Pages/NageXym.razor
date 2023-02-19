@@ -25,19 +25,20 @@
         <Paragraph Style="font-size:0.8rem;">Excelに記載されたアドレスに対してまとめて投げXYMを行うためのツールです。
             <br /> 1 から 3 STEPを順番に行うことで簡単に多人数に投げXYMすることができます。
             <br /><br />読込を行うExcelファイルはSYMBOLタウンリストのフォーマットを想定しています。
-            <br />
-            <a href="https://docs.google.com/spreadsheets/d/1X2AsmEOXpMlwZ9r6yA-2sqEfTBpFnst_nF1nXhZjLCk/edit#gid=0">SYMBOLタウンリストのリンクはこちら</a>
+            <br /><Text Type="danger">SYMBOLタウンリストを使用する場合は画像や図形を削除してからお使い下さい。(※エラーになってしまうのでm(__)m)</Text>
+            <br /><br />
+            <a href="https://docs.google.com/spreadsheets/d/1X2AsmEOXpMlwZ9r6yA-2sqEfTBpFnst_nF1nXhZjLCk/edit#gid=0" target="_blank">SYMBOLタウンリストのリンクはこちら</a>
             <br /><br />
             さっそく始めてみましょう！
         </Paragraph>
     </Row>
     <div class="card-container">
-        <Tabs @bind-ActiveKey="@_activeKey" Type="@TabType.Card" Style="margin-bottom:60px;">
+        <Tabs @bind-ActiveKey="@_activeKey" Type="@TabType.Card" Style="margin-bottom:80px;">
             <TabPane Tab="Step 1" Key="1">
                 <div style="display:flex;align-items: baseline;">
                     <Paragraph Style="font-size:1rem;font-weight:bold;">１．Excelファイルを読込みます。</Paragraph>
                 </div>
-                <Paragraph Style="font-size:0.8rem;margin-left:10px;margin-top:0px;">※SYMBOLタウンリストを使用する場合はExcelファイルから画像を削除した状態で読込みを行って下さい。</Paragraph>
+                <Paragraph Style="font-size:0.8rem;;margin-top:0px;"><a href="https://github.com/villhell/nagexymsharp/tree/master/Excel" target="_blank">ファイルを持っていない方はこちらのリンクには加工済みのファイルがあるのでダウンロードしてください。</a><br />※testと書いてあるのはTestnet版です。</Paragraph>
                 <InputFile id="fileInput" OnChange="@UploadFiles" hidden />
                 <Upload Name="files" FileList="fileList">
                     <label class="ant-btn ant-btn-primary" for="fileInput">
@@ -48,7 +49,12 @@
             </TabPane>
             <TabPane Tab="Step 2" Key="2">
                 <div style="display:flex;align-items: baseline;">
-                <Paragraph Style="font-size:1rem;font-weight:bold;">２．Node URLを入力し、Checkボタンを押してアドレス/ネームスペースに対して送金できるかチェックします。</Paragraph>
+                    <Paragraph Style="font-size:1rem;font-weight:bold;">２．Node URLを入力し、Checkボタンを押してアドレス/ネームスペースに対して送金できるかチェックします。</Paragraph>
+                </div>
+                <div style="font-size:0.8rem;margin-top:0px;margin-bottom:10px;">
+                    <a href="https://symbolnodes.org/nodes/" target="_blank">メインネットノードリスト</a>
+                    <Divider Type="DirectionVHType.Vertical" />
+                    <a href="https://symbolnodes.org/nodes_testnet/" target="_blank">テストネットノードリスト</a>
                 </div>
                 <div style="margin-bottom: 5px;">
                     <Paragraph Style="font-size:0.8rem;margin:0px;">Node URL:</Paragraph><Input Placeholder="Please Input Node Url (ex: " @bind-Value="@_nodeUrl" />
@@ -57,11 +63,13 @@
             </TabPane>
             <TabPane Tab="Step 3" Key="3">
                 <div style="display:flex;align-items: baseline;">
-                <Paragraph Style="font-size:1rem;font-weight:bold;"> ３．Private Keyを入力してNage XYMボタンを押して下さい。</Paragraph>
+                    <Paragraph Style="font-size:1rem;font-weight:bold;"> ３．秘密鍵を入力してNage XYMボタンを押して下さい。</Paragraph>
                 </div>
-
+                <Paragraph Style="font-size:0.8rem;">
+                    <Text Type="danger" Style="font-size:0.8rem;margin-top:0px;">※秘密鍵はトランザクションに署名するためにブラウザ上で使用します。サーバーに送信したり、ストレージに保存したりしません。</Text>
+                </Paragraph>
                 <div style="margin-bottom: 5px;">
-                    <Paragraph Style="font-size:0.8rem;margin:0px;">Private Key:</Paragraph><Input Placeholder="Please Input Private Key" @bind-Value="@_privateKey" />
+                    <Paragraph Style="font-size:0.8rem;margin:0px;">秘密鍵:</Paragraph><Input Placeholder="Please Input Private Key" @bind-Value="@_privateKey" />
                 </div>
                 <div>
                     <Button type="@ButtonType.Primary" OnClick="@Send_Click">Nage XYM!</Button>
@@ -229,11 +237,16 @@
         try
         {
             // ローディング開始
+            string key = $"updatable-{DateTime.Now.Ticks}";
             var config = new MessageConfig
             {
                 Content = "Checking...",
+                Duration = null,
+                Key = key
             };
             await _message.Loading(config);
+
+            //StateHasChanged();
 
             // グリッドを一行ずつ読んでいく
             foreach(var row in datas)
@@ -301,11 +314,11 @@
                 }
             }
 
-            config = new MessageConfig
-            {
-                Content = "Complete!",
-                Duration = 2,
-            };
+            StateHasChanged();
+            
+            config.Content = "Complete!";
+            config.Duration = 2;
+        
             await _message.Success(config);
         }
         catch(Exception ex)
