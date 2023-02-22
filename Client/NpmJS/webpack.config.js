@@ -5,7 +5,7 @@ module.exports = {
     output: {
         path: path.resolve(__dirname, '../wwwroot/js'),
         filename: "index.bundle.js",
-        library: "ThirdPartyLibs"
+        library: "NageXymSharpApps"
     },
     resolve: {
         alias: {
