@@ -1,15 +1,21 @@
 ﻿import { getActiveNode } from "symbol-node-util";
-import { SSSWindwo, setTransactionByPayload, requestSign, getActiveAddress } from "sss-module";
 
 export async function GetActiveNode(network) {
     return await getActiveNode(network);
 }
 
-export function SetTransactionByPayload(payload) {
-    setTransactionByPayload(payload);
-    return requestSign();
+export function GetSssObject() {
+    if (window.SSS !== undefined) {
+        return window.SSS;
+    } else {
+        return null;
+    }
 }
 
-export function GetActiveAddress() {
-    return getActiveAddress();
+export async function SetTransactionByPayload(payload) {
+
+    window.SSS.setTransactionByPayload(payload);
+
+    const signedTx = await window.SSS.requestSign();
+    DotNet.invokeMethod("BlazorNpmSample", "GetSignedTransaction", signedTx.payload);
 }
