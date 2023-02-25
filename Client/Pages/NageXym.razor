@@ -138,31 +138,31 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // SSS Extentionを読込む
-        var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./js/sss-extention.js"
-        );
+        //// SSS Extentionを読込む
+        //var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+        //    "import", "./js/sss-extention.js"
+        //);
 
-        var count = 0;
-        while(count < 10)
-        {
-            _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
-            if (_sss != null)
-            {
-                _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
-                break;
-            }
-            else
-            {
-                _networkName = "unknown network";
-                count++;
-                Console.WriteLine("delay" + count);
-                await Task.Delay(1000);
-            }
+        //var count = 0;
+        //while(count < 10)
+        //{
+        //    _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
+        //    if (_sss != null)
+        //    {
+        //        _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
+        //        break;
+        //    }
+        //    else
+        //    {
+        //        _networkName = "unknown network";
+        //        count++;
+        //        Console.WriteLine("delay" + count);
+        //        await Task.Delay(1000);
+        //    }
             
-        }
+        //}
 
-        StateHasChanged();
+        //StateHasChanged();
         
         base.OnAfterRenderAsync(firstRender);
     }
