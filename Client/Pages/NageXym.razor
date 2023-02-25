@@ -143,15 +143,23 @@
         _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
         datas = new List<DataItem>();
 
-        await Task.Delay(1000);
+        _nodeUrl = "https://sym-test-04.opening-line.jp:3001";
+        _httpClient = httpClient;
+        _notice = notice;
 
+        StateHasChanged();
+    }
+
+    protected override async void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
         // SSS Extentionを読込む
         var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./js/sss-extention.js"
         );
         _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
 
-        if(_sss != null)
+        if (_sss != null)
         {
             _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
         }
@@ -159,11 +167,6 @@
         {
             _networkName = "unknown network";
         }
-
-        _nodeUrl = "https://sym-test-04.opening-line.jp:3001";
-        _httpClient = httpClient;
-        _notice = notice;
-
         StateHasChanged();
     }
 
