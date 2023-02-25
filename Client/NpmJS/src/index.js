@@ -9,5 +9,5 @@ export async function SetTransactionByPayload(payload) {
     window.SSS.setTransactionByPayload(payload);
 
     const signedTx = await window.SSS.requestSign();
-    DotNet.invokeMethod("BlazorNpmSample", "GetSignedTransaction", signedTx.payload);
+    await DotNet.invokeMethodAsync("Client", "GetSignedTransaction", signedTx.payload);
 }
