@@ -52,26 +52,12 @@
                 <div style="display:flex;align-items: baseline;">
                     <Paragraph Style="font-size:1rem;font-weight:bold;">２．Checkボタンを押してアドレス/ネームスペースに対して送金できるかチェックします。</Paragraph>
                 </div>
-@*                <div style="font-size:0.8rem;margin-top:0px;margin-bottom:10px;">
-                    <a href="https://symbolnodes.org/nodes/" target="_blank">メインネットノードリスト</a>
-                    <Divider Type="DirectionVHType.Vertical" />
-                    <a href="https://symbolnodes.org/nodes_testnet/" target="_blank">テストネットノードリスト</a>
-                </div>
-                <div style="margin-bottom: 5px;">
-                    <Paragraph Style="font-size:0.8rem;margin:0px;">Node URL:</Paragraph><Input Placeholder="Please Input Node Url (ex: " @bind-Value="@_nodeUrl" />
-                </div>*@
                 <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
             </TabPane>
             <TabPane Tab="Step 3" Key="3">
                 <div style="display:flex;align-items: baseline;">
                     <Paragraph Style="font-size:1rem;font-weight:bold;"> ３．Nage XYMボタンを押して下さい。</Paragraph>
                 </div>
-@*                <Paragraph Style="font-size:0.8rem;">
-                    <Text Type="danger" Style="font-size:0.8rem;margin-top:0px;">※秘密鍵はトランザクションに署名するためにブラウザ上で使用します。サーバーに送信したり、ストレージに保存したりしません。</Text>
-                </Paragraph>
-                <div style="margin-bottom: 5px;">
-                    <Paragraph Style="font-size:0.8rem;margin:0px;">秘密鍵:</Paragraph><Input Placeholder="Please Input Private Key" @bind-Value="@_privateKey" />
-                </div>*@
                 <div>
                     <Button type="@ButtonType.Primary" OnClick="@Send_Click">Nage XYM!</Button>
                 </div>
