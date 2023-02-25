@@ -143,6 +143,8 @@
         _subTitle = "一覧に表示されたアドレスに対してまとめて投げXYMを行うツールです！";
         datas = new List<DataItem>();
 
+        await Task.Delay(1000);
+
         // SSS Extentionを読込む
         var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./js/sss-extention.js"
