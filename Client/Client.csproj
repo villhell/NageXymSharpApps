@@ -18,8 +18,10 @@
   <ItemGroup>
     <ProjectReference Include="..\Shared\Shared.csproj" />
   </ItemGroup>
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="npm install" WorkingDirectory="NpmJS" />
-    <Exec Command="npm run build" WorkingDirectory="NpmJS" />
-  </Target>
+
+  <ItemGroup>
+    <Content Update="wwwroot\appsettings.Development.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
 </Project>
