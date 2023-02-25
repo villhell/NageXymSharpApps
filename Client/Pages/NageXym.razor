@@ -159,7 +159,7 @@
             _networkName = "unknown network";
         }
         StateHasChanged();
-
+        await _sssObjRef.DisposeAsync();
     }
 
     #region Excelファイル読込み
