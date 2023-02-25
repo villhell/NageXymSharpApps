@@ -136,24 +136,35 @@
         StateHasChanged();
     }
 
-    protected override async void OnAfterRender(bool firstRender)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        base.OnAfterRender(firstRender);
         // SSS Extentionを読込む
         var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./js/sss-extention.js"
         );
-        _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
 
-        if (_sss != null)
+        var count = 0;
+        while(count < 10)
         {
-            _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
+            _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
+            if (_sss != null)
+            {
+                _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
+                break;
+            }
+            else
+            {
+                _networkName = "unknown network";
+                count++;
+                Console.WriteLine("delay" + count);
+                await Task.Delay(1000);
+            }
+            
         }
-        else
-        {
-            _networkName = "unknown network";
-        }
+
         StateHasChanged();
+        
+        base.OnAfterRenderAsync(firstRender);
     }
 
     #region Excelファイル読込み
