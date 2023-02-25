@@ -425,18 +425,12 @@
                     return;
                 }
 
-                // NGの場合は無視して次の行へ
-                if (string.Equals(item.Check, "NG")) continue;
+                // OK以外の場合は無視して次の行へ
+                if (!string.Equals(item.Check, "OK")) continue;
 
                 // XYMをulongに変換、divisibility分を乗算
                 var xym = (ulong)(item.Xym * 1000000);
                 txs.Add(CreateTransaction(network, publicKey, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
-
-                //if (txs.Count > 99)
-                //{
-                //    await AnnounceAsync(network, facade, publicKey, txs);
-                //    txs.Clear();
-                //}
             }
 
             // トランザクションをアナウンス
