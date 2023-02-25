@@ -1,7 +1,10 @@
-﻿export const getSssObject = () => {
-    if (window.SSS) {
-        return window.SSS;
-    } else {
-        return null;
+﻿export const getSssObject = async () => {
+
+    await new Promise(resolve => setTimeout(resolve, 200));
+    
+    if (!window.isAllowedSSS()) {
+        window.requestSSS();
     }
+
+    return window.SSS;
 }

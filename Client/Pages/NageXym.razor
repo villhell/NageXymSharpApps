@@ -138,33 +138,25 @@
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        //// SSS Extentionを読込む
-        //var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
-        //    "import", "./js/sss-extention.js"
-        //);
+        // 何度も呼び出されるので成功したらブロックする
+        if (_sss != null) return;
 
-        //var count = 0;
-        //while(count < 10)
-        //{
-        //    _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
-        //    if (_sss != null)
-        //    {
-        //        _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
-        //        break;
-        //    }
-        //    else
-        //    {
-        //        _networkName = "unknown network";
-        //        count++;
-        //        Console.WriteLine("delay" + count);
-        //        await Task.Delay(1000);
-        //    }
-            
-        //}
+        // SSS Extentionを読込む
+        var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./js/sss-extention.js"
+        );
 
-        //StateHasChanged();
-        
-        base.OnAfterRenderAsync(firstRender);
+        _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
+        if (_sss != null)
+        {
+            _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
+            //break;
+        }
+        else
+        {
+            _networkName = "unknown network";
+        }
+        StateHasChanged();
     }
 
     #region Excelファイル読込み
