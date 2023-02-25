@@ -15,6 +15,7 @@
 @inject INotificationService notice
 @inject HttpClient httpClient
 @inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
 
 <div>
     <Row Justify="start">
@@ -121,6 +122,7 @@
     private List<UploadFileItem> fileList = new List<UploadFileItem>();
     private bool _loading = false;
     private SssExtention _sss;
+    private IJSObjectReference _sssObjRef;
     private string _networkName = string.Empty;
     protected override async void OnInitialized()
     {
@@ -142,11 +144,11 @@
         if (_sss != null) return;
 
         // SSS Extentionを読込む
-        var sssModule = await JSRuntime.InvokeAsync<IJSObjectReference>(
+        _sssObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", "./js/sss-extention.js"
         );
 
-        _sss = await sssModule.InvokeAsync<SssExtention>("GetSssObject");
+        _sss = await _sssObjRef.InvokeAsync<SssExtention>("GetSssObject");
         if (_sss != null)
         {
             _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
@@ -157,6 +159,7 @@
             _networkName = "unknown network";
         }
         StateHasChanged();
+
     }
 
     #region Excelファイル読込み
@@ -358,6 +361,10 @@
                     // row.Check = "OK";
                     row.Namespace = row.Address;
                     row.Address = address;
+                }
+                else
+                {
+                    row.Check = "NG";
                 }
             }
 
@@ -570,6 +577,16 @@
                 Description = ex.Message,
                 
             });
+        }
+    }
+    #endregion
+
+    #region JSRuntimeをDispose
+    public async ValueTask DisposeAsync()
+    {
+        if (_sssObjRef is not null)
+        {
+            await _sssObjRef.DisposeAsync();
         }
     }
     #endregion
