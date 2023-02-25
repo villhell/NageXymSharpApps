@@ -1,7 +1,16 @@
-# NageXymSharpApps
-Excelファイルを読込み、まとめて投げXYMを行うためのツールです。
 
-まだ未完成です。
-![スクリーンショット 2023-02-12 092222](https://user-images.githubusercontent.com/6645392/218287066-fc0e2890-bf76-4183-8a99-056c1e161937.png)
-![スクリーンショット 2023-02-12 092431](https://user-images.githubusercontent.com/6645392/218287072-8b55931b-8293-4617-8546-def88a56c839.png)
-![スクリーンショット 2023-02-12 092631](https://user-images.githubusercontent.com/6645392/218287076-4189fde4-fe61-4b90-8179-34d646208a58.png)
+# Nage XYM Sharp 
+
+https://agreeable-coast-00df82900.2.azurestaticapps.net/
+
+This is a tool that reads the address and namespace information listed in the SYMBOL Town List and performs bulk XYM transfers for many people.
+There is also a version of the Windows desktop application available.
+
+## Description
+
+Please refer to this article for instructions on how to operate.<br />
+https://qiita.com/villhell/private/61446b4231479429f38b
+
+## Screen Shot
+
+![image](https://user-images.githubusercontent.com/6645392/221383726-008269f2-159c-46fb-b752-2a13a2026bca.png)
