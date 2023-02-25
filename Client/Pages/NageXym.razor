@@ -146,7 +146,7 @@
             "import", "./js/sss-extention.js"
         );
 
-        _sss = await sssModule.InvokeAsync<SssExtention>("getSssObject");
+        _sss = await sssModule.InvokeAsync<SssExtention>("GetSssObject");
         if (_sss != null)
         {
             _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";

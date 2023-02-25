@@ -1,4 +1,5 @@
-﻿export const getSssObject = async () => {
+﻿
+export async function GetSssObject(){
 
     await new Promise(resolve => setTimeout(resolve, 200));
     
