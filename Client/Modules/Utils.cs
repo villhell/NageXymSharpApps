@@ -247,8 +247,7 @@ namespace NageXymSharpApps.Client.Modules
 
         internal static int CalcFee(int minFeeMultiplier, int averageFeeMultiplier)
         {
-            //return (int)Math.Round(minFeeMultiplier + averageFeeMultiplier * 0.65, MidpointRounding.AwayFromZero);
-            return 100;
+            return (int)Math.Round(minFeeMultiplier + averageFeeMultiplier * 0.65, MidpointRounding.AwayFromZero);
         }
         #endregion
 
