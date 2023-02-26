@@ -48,7 +48,7 @@ namespace nagexymsharpweb.Excels
                                     Namespace = string.Empty,
                                     Address = ws.Cell(row, 5).GetString(),
                                     Xym = ws.Cell(row, 7).GetDouble(),
-                                    Message = ws.Cell(row, 7).GetString()
+                                    Message = ws.Cell(row, 8).GetString()
                                 };
 
                                 // debug s
