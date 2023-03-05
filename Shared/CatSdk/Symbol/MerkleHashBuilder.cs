@@ -1,6 +1,6 @@
+using Org.BouncyCastle.Crypto.Digests;
 using System;
 using System.Collections.Generic;
-using Org.BouncyCastle.Crypto.Digests;
 
 namespace CatSdk.Symbol
 {

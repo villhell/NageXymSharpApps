@@ -1,12 +1,8 @@
 ﻿using CatSdk.Symbol;
-using System.Text;
-using Newtonsoft.Json.Converters;
+using CatSdk.Utils;
+using NageXymSharpApps.Shared.Models;
 using Newtonsoft.Json;
-using NageXymSharpApps.Client.Models;
-using Newtonsoft.Json.Linq;
-using System.Net.Http;
-using AntDesign;
-using System.Transactions;
+using System.Text;
 
 namespace NageXymSharpApps.Client.Modules
 {
@@ -15,28 +11,51 @@ namespace NageXymSharpApps.Client.Modules
         #region 文字列からNamespaceIdに変換する。
         /// <summary>
         /// 文字列からNamespaceIdに変換する。
+        /// Namespaceは3階層まで存在し、"."で区切って表現される
+        /// ex) Level0.Level1.Level2
         /// </summary>
         /// <param name="ns"></param>
         /// <returns></returns>
-        internal static string StringToNamespaceId(string ns)
+        internal static string StringToNamespaceId(string namespaceString)
         {
-            // ネームスペース文字列をバイナリ変換
-            var b = Encoding.UTF8.GetBytes(ns);
+            if (!string.IsNullOrEmpty(namespaceString))
+            {
+                // symbol.xymのような場合は最下層のNamespaceIdを使う
+                string[] namespaces = namespaceString.Split('.');
+                ulong ulongNamespaceId = 0;
 
-            // ulongに変換
-            var ulong_namespaceid = IdGenerator.GenerateNamespaceId(b);
+                // 1階層
+                if(namespaces.Length == 1)
+                {
+                    var b0 = Converter.Utf8ToBytes(namespaces[0]);
+                    var ulongNamespaceId_b0 = IdGenerator.GenerateNamespaceId(b0);
+                    ulongNamespaceId = ulongNamespaceId_b0;
+                }
+                // 2階層
+                else if(namespaces.Length == 2)
+                {
+                    var b0 = Converter.Utf8ToBytes(namespaces[0]);
+                    var b1 = Converter.Utf8ToBytes(namespaces[1]);
+                    var ulongNamespaceId_b0 = IdGenerator.GenerateNamespaceId(b0);
+                    var ulongNamespaceId_b1 = IdGenerator.GenerateNamespaceId(b1, ulongNamespaceId_b0);
+                    ulongNamespaceId = ulongNamespaceId_b1;
+                }
+                // 3階層
+                else
+                {
+                    var b0 = Converter.Utf8ToBytes(namespaces[0]);
+                    var b1 = Converter.Utf8ToBytes(namespaces[1]);
+                    var b2 = Converter.Utf8ToBytes(namespaces[2]);
+                    var ulongNamespaceId_b0 = IdGenerator.GenerateNamespaceId(b0);
+                    var ulongNamespaceId_b1 = IdGenerator.GenerateNamespaceId(b1, ulongNamespaceId_b0);
+                    var ulongNamespaceId_b2 = IdGenerator.GenerateNamespaceId(b2, ulongNamespaceId_b1);
+                    ulongNamespaceId = ulongNamespaceId_b2;
+                }
+                return ulongNamespaceId.ToString("X16");
+            }
 
-            // バイナリ変換
-            var bytes = BitConverter.GetBytes(ulong_namespaceid);
-
-            // リトルエンディアンならビッグエンディアンに変換
-            if (BitConverter.IsLittleEndian)
-                Array.Reverse(bytes);
-
-            // バイナリから16進数文字列へ変換
-            var namespaceId = Convert.ToHexString(bytes);
-
-            return namespaceId;
+            // 変換されなかった場合はそのまま返却
+            return namespaceString;
         }
         #endregion
 
@@ -72,69 +91,7 @@ namespace NageXymSharpApps.Client.Modules
         }
         #endregion
 
-        #region アドレス情報を取得
-        /// <summary>
-        /// アドレス情報を取得
-        /// </summary>
-        /// <param name="address"></param>
-        /// <param name="client"></param>
-        /// <returns></returns>
-        internal async static Task<AccountResponse?> GetAddressAsync(string address, HttpClient client, string node)
-        {
-            AccountResponse? ret = null;
 
-            try
-            {
-                // アドレスの文字列かどうか
-                if (CheckWordCount(address, 39))
-                {
-                    var accountResult = await client.GetAsync(string.Format("{0}/accounts/{1}", node, address));
-                    var content = await accountResult.Content.ReadAsStringAsync();
-                    ret = JsonConvert.DeserializeObject<AccountResponse>(content);
-
-                    if (ret!.Account == null)
-                    {
-                        return null;
-                    }
-                }
-                return ret;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-        #endregion
-
-        #region ネームスペース情報を取得できるか
-        /// <summary>
-        /// ネームスペース情報を取得できるか
-        /// TODO: 返却するのがAddressになってるのは違和感ある
-        /// </summary>
-        /// <param name="ns"></param>
-        /// <param name="client"></param>
-        /// <returns></returns>
-
-        internal async static Task<NamespaceResponse?> GetNamespaceAsync(string ns, HttpClient client, string node)
-        {
-            NamespaceResponse? ret = null;
-
-            try
-            {
-                var namespaceId = Utils.StringToNamespaceId(ns);
-                var namespaceResult = await client.GetAsync(string.Format("{0}/namespaces/{1}", node, namespaceId));
-                var content = await namespaceResult.Content.ReadAsStringAsync();
-                ret = JsonConvert.DeserializeObject<NamespaceResponse>(content);
-
-                if (ret!.Namespace == null) return null;
-                else return ret;
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }
-        #endregion
 
         #region アドレス制限情報があるか
         /// <summary>

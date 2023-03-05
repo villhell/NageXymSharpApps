@@ -18,7 +18,7 @@ namespace CatSdk
             Size = size;
             Value = value;
         }
-    
+
         /**
 	     * Converts base value to string.
 	     * @returns {string} String representation.

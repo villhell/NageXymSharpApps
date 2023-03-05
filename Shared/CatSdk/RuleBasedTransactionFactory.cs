@@ -1,8 +1,8 @@
+using CatSdk.Utils;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using CatSdk.Utils;
 
 namespace CatSdk
 {
@@ -54,15 +54,15 @@ namespace CatSdk
             var entity = factory(entityType);
             var allTypeHints = BuildTypeHintsMap(entity);
             processor.SetTypeHints(allTypeHints);
-            processor.CopyTo(entity, new []{"Type"});
+            processor.CopyTo(entity, new[] { "Type" });
             return entity;
         }
-            
+
         private TransactionDescriptorProcessor CreateProcessor(Dictionary<string, object> descriptor)
         {
             return new TransactionDescriptorProcessor(descriptor, Rules, TypeConverter);
         }
-            
+
         /**
 	     * Creates wrapper for SDK POD types.
 	     * @param {string} name Class name.
@@ -72,7 +72,7 @@ namespace CatSdk
         {
             if (podClass == null) throw new NullReferenceException("pod class is null");
             var type = podClass.GetConstructors()[0].GetParameters()[0].ParameterType;
-                
+
             if (TypeRuleOverrides != null && TypeRuleOverrides.ContainsKey(podClass))
             {
                 Rules[name] = TypeRuleOverrides[podClass];
@@ -109,51 +109,51 @@ namespace CatSdk
             var elementName = name.Replace("struct:", "");
             var arrayClass = Module.Find(m => m.Name == elementName);
             if (arrayClass == null) throw new NullReferenceException("array class is null");
-                
+
             Rules[$"array[{elementName}]"] = values =>
             {
                 IList tInst;
                 switch (values)
                 {
                     case object[] objects:
-                    {
-                        var o = objects.Select((v) => elementRule(v));
-                        tInst = Array.CreateInstance(arrayClass, objects.Length);
-                        var enumerable = o as object[] ?? o.ToArray();
-                        for (var i = 0; i < enumerable.Length; i++)
                         {
-                            tInst[i] = enumerable[i];
+                            var o = objects.Select((v) => elementRule(v));
+                            tInst = Array.CreateInstance(arrayClass, objects.Length);
+                            var enumerable = o as object[] ?? o.ToArray();
+                            for (var i = 0; i < enumerable.Length; i++)
+                            {
+                                tInst[i] = enumerable[i];
+                            }
+                            return tInst;
                         }
-                        return tInst;
-                    }
                     case int[] int32:
-                    {
-                        var o = int32.Select((v) => elementRule(v));
-                        tInst = Array.CreateInstance(arrayClass, int32.Length);
-                        var enumerable = o as object[] ?? o.ToArray();
-                        for (var i = 0; i < enumerable.Length; i++)
                         {
-                            tInst[i] = enumerable[i];
+                            var o = int32.Select((v) => elementRule(v));
+                            tInst = Array.CreateInstance(arrayClass, int32.Length);
+                            var enumerable = o as object[] ?? o.ToArray();
+                            for (var i = 0; i < enumerable.Length; i++)
+                            {
+                                tInst[i] = enumerable[i];
+                            }
+                            return tInst;
                         }
-                        return tInst;
-                    }
                     case ulong[] uint64:
-                    {
-                        var o = uint64.Select((v) => elementRule(v));
-                        tInst = Array.CreateInstance(arrayClass, uint64.Length);
-                        var enumerable = o as object[] ?? o.ToArray();
-                        for (var i = 0; i < enumerable.Length; i++)
                         {
-                            tInst[i] = enumerable[i];
+                            var o = uint64.Select((v) => elementRule(v));
+                            tInst = Array.CreateInstance(arrayClass, uint64.Length);
+                            var enumerable = o as object[] ?? o.ToArray();
+                            for (var i = 0; i < enumerable.Length; i++)
+                            {
+                                tInst[i] = enumerable[i];
+                            }
+                            return tInst;
                         }
-                        return tInst;
-                    }
                     default:
                         throw new Exception("value is invalid type");
                 }
             };
         }
-            
+
         /**
 	     * Creates flag type parser.
 	     * @param {string} name Class name.
@@ -164,7 +164,7 @@ namespace CatSdk
             if (flagClass == null) throw new NullReferenceException("flag class is null");
             var type = flagClass.GetConstructors()[0].GetParameters()[0].ParameterType;
             var stringToEnum = BuildEnumStringToValueMap(flagClass);
-                
+
             Rules[name] = flags =>
             {
                 int flagsInt;
@@ -203,9 +203,9 @@ namespace CatSdk
                 if (instance == null) throw new NullReferenceException("instance is null");
                 return instance;
             };
-                
+
         }
-            
+
         /**
 	     * Creates enum type parser.
 	     * @param {string} name Class name.
@@ -216,7 +216,7 @@ namespace CatSdk
             if (enumClass == null) throw new NullReferenceException("enum class is null");
             var type = enumClass.GetConstructors()[0].GetParameters()[0].ParameterType;
             var stringToEnum = BuildEnumStringToValueMap(enumClass);
-                
+
             Rules[name] = enumValue =>
             {
                 int enumInt;
@@ -231,7 +231,7 @@ namespace CatSdk
                     default:
                         return enumValue;
                 }
-                    
+
                 object? instance = null;
                 if (type == typeof(byte))
                 {
@@ -278,7 +278,7 @@ namespace CatSdk
                                     continue;
                                 var value = propertyInfo.GetValue(structDescriptor);
                                 dic[propertyInfo.Name] = value ?? throw new Exception("");
-                            }   
+                            }
                         }
                     }
                     structProcessor = CreateProcessor(dic);
@@ -289,7 +289,7 @@ namespace CatSdk
                     var allTypeHints = BuildTypeHintsMap((IStruct)structValue);
                     structProcessor.SetTypeHints(allTypeHints);
                     structProcessor.CopyTo((IStruct)structValue);
-                    return structValue;   
+                    return structValue;
                 }
             };
         }
@@ -304,8 +304,9 @@ namespace CatSdk
                 AddPodParser(cls.Name, cls);
             }
         }
-            
-        private static Dictionary<string, string> BuildTypeHintsMap(IStruct structValue) {
+
+        private static Dictionary<string, string> BuildTypeHintsMap(IStruct structValue)
+        {
             var typeHints = new Dictionary<string, string>();
             var rawTypeHints = structValue.TypeHints;
             foreach (var kvp in rawTypeHints)
@@ -314,7 +315,8 @@ namespace CatSdk
                 if (kvp.Value.IndexOf("array[", StringComparison.Ordinal) == 0)
                 {
                     ruleName = kvp.Value;
-                } else if (kvp.Value.IndexOf("enum:", StringComparison.Ordinal) == 0)
+                }
+                else if (kvp.Value.IndexOf("enum:", StringComparison.Ordinal) == 0)
                 {
                     ruleName = kvp.Value.Substring("enum:".Length);
                 }
@@ -334,7 +336,7 @@ namespace CatSdk
             }
             return typeHints;
         }
-            
+
         private static Dictionary<string, int> BuildEnumStringToValueMap(Type enumClass)
         {
             var fields = enumClass.GetFields();
@@ -343,20 +345,21 @@ namespace CatSdk
             {
                 var value = t.GetValue(t.Name);
                 if (value == null) throw new NullReferenceException("");
-                result[t.Name] = ((ISerializer) value).Size switch
+                result[t.Name] = ((ISerializer)value).Size switch
                 {
-                    1 => ((IEnum<byte>) value).Value,
-                    2 => ((IEnum<ushort>) value).Value,
-                    4 => (int) ((IEnum<uint>) value).Value,
-                    8 => (int) ((IEnum<ulong>) value).Value,
+                    1 => ((IEnum<byte>)value).Value,
+                    2 => ((IEnum<ushort>)value).Value,
+                    4 => (int)((IEnum<uint>)value).Value,
+                    8 => (int)((IEnum<ulong>)value).Value,
                     _ => result[t.Name]
                 };
             }
             return result;
         }
-            
-        private static int NameToEnumValue(IReadOnlyDictionary<string, int> mapping, Type enumType, string enumValueName){
-            if(!mapping.ContainsKey(enumValueName)) throw new ArgumentOutOfRangeException($"unknown value {enumValueName} for type {enumType}");
+
+        private static int NameToEnumValue(IReadOnlyDictionary<string, int> mapping, Type enumType, string enumValueName)
+        {
+            if (!mapping.ContainsKey(enumValueName)) throw new ArgumentOutOfRangeException($"unknown value {enumValueName} for type {enumType}");
             return mapping[enumValueName];
         }
     }

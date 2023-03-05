@@ -1,7 +1,7 @@
 namespace CatSdk
 {
-    public interface IEnum<out T>: ISerializer
+    public interface IEnum<out T> : ISerializer
     {
-        public T Value{ get; }
+        public T Value { get; }
     }
 }
