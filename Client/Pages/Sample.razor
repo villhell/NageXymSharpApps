@@ -1,0 +1,72 @@
+﻿@page "/sample"
+@using NageXymSharpApps.Shared;
+@using NageXymSharpApps.Shared.Models;
+@using Newtonsoft.Json;
+@inject HttpClient Http
+
+<h1>health check</h1>
+
+<p>@_healthCheck</p>
+
+@code {
+    private string _healthCheck;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var namespaceId = "villhell_testnet.subnamespace1.villhell_testnet_subnamespace1-1".Split('.');
+
+            var b1 = CatSdk.Utils.Converter.Utf8ToBytes(namespaceId[0]);
+            var b2 = CatSdk.Utils.Converter.Utf8ToBytes(namespaceId[1]);
+            var b3 = CatSdk.Utils.Converter.Utf8ToBytes(namespaceId[2]);
+
+            var parentUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b1);
+            var childUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b2, parentUlongNamespaceId);
+            var grandChildUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b3, childUlongNamespaceId);
+
+            Console.WriteLine("villhell_testnet -> " + parentUlongNamespaceId.ToString("X16"));
+            Console.WriteLine("subnamespace1 -> " + childUlongNamespaceId.ToString("X16"));
+            Console.WriteLine("grandChildUlongNamespaceId -> " + grandChildUlongNamespaceId.ToString("X16"));
+
+            //var address = Converter.AddressToString(Converter.HexToBytes("address"));
+            //var parentNamespace = "symbol";
+            //var childNamespace = "xym";
+
+            //var b1 = CatSdk.Utils.Converter.Utf8ToBytes(parentNamespace);
+            //var b2 = CatSdk.Utils.Converter.Utf8ToBytes(childNamespace);
+
+            //var parentUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b1);
+            //var childUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b2, parentUlongNamespaceId);
+
+            //Console.WriteLine(parentUlongNamespaceId.ToString("X16"));
+            //Console.WriteLine(childUlongNamespaceId.ToString("X16"));
+
+            //Console.WriteLine(namespaceId);
+            //var healthCheck = await Http.GetAsync("/api/healthCheck");
+            //_healthCheck = healthCheck.StatusCode.ToString();
+
+            //var address = "TD6V5T5MOPAUO74J25LH5LCZZIINUFJNPGWYM7Y";
+            //var nodeUrl = Uri.EscapeDataString("http://160.248.184.223:3000");
+            //var request = new HttpRequestMessage(HttpMethod.Get, $"/api/accounts/TD6V5T5MOPAUO74J25LH5LCZZIINUFJNPGWYM7Y?node_url={nodeUrl}");
+
+            //var accountResponse = await Http.GetAsync($"/api/accounts/{address}?node_url={nodeUrl}");
+            //if (accountResponse.IsSuccessStatusCode)
+            //{
+            //    string responseBody = await accountResponse.Content.ReadAsStringAsync();
+            //    var res = JsonConvert.DeserializeObject<AccountResponse>(responseBody);
+            //    Console.WriteLine(res);
+            //}
+
+            //var restrictionsAccountResult = await Http.GetAsync("/api/restrictionsaccount?address=TB4DUXT5576QR4YTGYQM7R73ESJOTAM4AOGY23Y&node_url=https://sym-test-04.opening-line.jp:3001");
+            //Console.WriteLine(restrictionsAccountResult.StatusCode);
+            //var body = await restrictionsAccountResult.Content.ReadAsStringAsync();
+            //var resa = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(body);
+            //Console.WriteLine(resa);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+}
