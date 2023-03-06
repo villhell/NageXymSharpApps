@@ -81,7 +81,6 @@ namespace nagexymsharpweb.Excels
                                     AddressNamespace = string.Empty,
                                     Address = ws.Cell(row, COL_ADDRESS_NAMESPACE).GetString(),
                                     MosaicNamespace = ws.Cell(row, COL_MOSAIC).GetString(),
-                                    MosaicId = string.Empty,
                                     Amount = ws.Cell(row, COL_AMOUNT).GetDouble(),
                                     Message = ws.Cell(row, COL_MESSAGE).GetString()
                                 };

@@ -1,4 +1,5 @@
-﻿using NageXymSharpApps.Client.Models;
+﻿using CatSdk.Utils;
+using NageXymSharpApps.Client.Models;
 using NageXymSharpApps.Shared.Models;
 using nagexymsharpweb.Models;
 using Newtonsoft.Json;
@@ -33,8 +34,7 @@ namespace NageXymSharpApps.Client.Modules
                 // CheckがOKならスキップ
                 if (string.Equals(item.Check, "OK"))
                 {
-                    item.ValidAddress = true;
-                    item.ValidMosaicId = true;
+                    item.Valid = true;
                     continue;
                 }
 
@@ -71,10 +71,19 @@ namespace NageXymSharpApps.Client.Modules
                     if(result)
                     {
                         // モザイクの詳細情報を取得
-                        var mosaicDetail = await GetMosaicDetail(item.MosaicId);
-                        item.Divisibility = mosaicDetail!.Divisibility;
+                        var mosaicDetail = await GetMosaicDetail(item.MosaicNamespaceInfo.Namespace.Alias.MosaicId);
+                        item.MosaicNamespaceInfo.MosaicInfo = mosaicDetail!;
+                        mosaicDict.Add(item.MosaicNamespace, item.MosaicNamespaceInfo);
                     }
                 }
+                // 以前にモザイクの情報を取得していたらそれを使用する
+                else
+                {
+                    item.MosaicNamespaceInfo = mosaicNamespaceInfo;
+                }
+
+                // 全てのValidateを通過
+                if (result) item.Valid = true;
             }
         }
 
@@ -87,7 +96,7 @@ namespace NageXymSharpApps.Client.Modules
             // アドレス欄が空白
             if (string.IsNullOrEmpty(item.Address))
             {
-                item.ValidAddress = false;
+                item.Valid = false;
                 return false;
             }
 
@@ -96,7 +105,7 @@ namespace NageXymSharpApps.Client.Modules
 
             if(account != null)
             {
-                item.ValidAddress= true;
+                item.Valid= true;
                 return true;
             }
 
@@ -119,8 +128,9 @@ namespace NageXymSharpApps.Client.Modules
             if(namespaceInfo != null)
             {
                 item.AddressNamespace = item.Address;
-                item.Address = namespaceInfo.Alias.Address ?? namespaceInfo.OwnerAddress;
-                item.ValidAddress = true;
+                var address = namespaceInfo.Alias.Address ?? namespaceInfo.OwnerAddress;
+                item.Address = Converter.AddressToString(Converter.HexToBytes(address));
+                item.Valid = true;
                 return true;
             }
             return false;
@@ -139,7 +149,8 @@ namespace NageXymSharpApps.Client.Modules
 
             if (namespaceInfo != null)
             {
-                item.MosaicId = namespaceInfo.Alias.MosaicId;
+                item.MosaicNamespaceInfo = new MosaicNamespaceInfo();
+                item.MosaicNamespaceInfo.Namespace = namespaceInfo;
                 return true;
             }
             return false;

@@ -1,4 +1,6 @@
-﻿namespace NageXymSharpApps.Shared.Models
+﻿using Newtonsoft.Json;
+
+namespace NageXymSharpApps.Shared.Models
 {
     /// <summary>
     /// Get mosaic information Response Model
@@ -7,14 +9,7 @@
     /// </summary>
     public class MosaicResponse
     {
-        public int Version { get; set; }
-        public string Id { get; set; }
-        public string Supply { get; set; }
-        public string StartHeight { get; set; }
-        public string OwnerAddress { get; set; }
-        public int Revision { get; set; }
-        public int Flags { get; set; }
-        public int Divisibility { get; set; }
-        public string Duration { get; set; }
+        [JsonProperty("mosaic")]
+        public MosaicInfo MosaicInfo { get; set; }
     }
 }

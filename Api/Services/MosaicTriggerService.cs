@@ -50,7 +50,7 @@ namespace Api.Services
             }
 
             response = req.CreateResponse(HttpStatusCode.OK);
-            await response.WriteAsJsonAsync(mosaicResponse);
+            await response.WriteAsJsonAsync(mosaicResponse.MosaicInfo);
             return response;
         }
     }

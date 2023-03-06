@@ -316,7 +316,7 @@
 
             foreach(var item in datas)
             {
-                if(item.ValidAddress && item.ValidMosaicId)
+                if(item.Valid)
                 {
                     item.Check = "OK";
                 }
@@ -392,8 +392,8 @@
 
                 // XYMをulongに変換、divisibility分を乗算
                 //var xym = (ulong)(item.Xym * 1000000);
-                var amount = (ulong)(item.Amount * item.Divisibility);
-                var mosaicId = ulong.Parse(item.MosaicId);
+                var amount = (ulong)(item.Amount * Math.Pow(10, item.MosaicNamespaceInfo.MosaicInfo.Divisibility));
+                var mosaicId = ulong.Parse(item.MosaicNamespaceInfo.MosaicInfo.Id, System.Globalization.NumberStyles.HexNumber);
                 txs.Add(CreateTransaction(network, publicKey, item.Address, mosaicId, amount, Converter.Utf8ToPlainMessage(item.Message)));
             }
 

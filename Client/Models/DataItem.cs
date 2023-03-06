@@ -1,4 +1,7 @@
-﻿namespace nagexymsharpweb.Models
+﻿using NageXymSharpApps.Client.Models;
+using NageXymSharpApps.Shared.Models;
+
+namespace nagexymsharpweb.Models
 {
     /// <summary>
     /// テーブルデータアイテム
@@ -34,13 +37,9 @@
         /// </summary>
         public string MosaicNamespace { get; set; }
         /// <summary>
-        /// MosaicId
+        /// MosaicNamespaceInfo
         /// </summary>
-        public string MosaicId { get; set; }
-        /// <summary>
-        /// Divisibility
-        /// </summary>
-        public int Divisibility { get; set; }
+        public MosaicNamespaceInfo MosaicNamespaceInfo { get; set; }
         /// <summary>
         /// Amount
         /// </summary>
@@ -50,12 +49,8 @@
         /// </summary>
         public string Message { get; set; }
         /// <summary>
-        /// ValidAddress
+        /// Valid
         /// </summary>
-        public bool ValidAddress { get; set; }
-        /// <summary>
-        /// ValidMosaicId
-        /// </summary>
-        public bool ValidMosaicId { get; set; }
+        public bool Valid { get; set; }
     }
 }
