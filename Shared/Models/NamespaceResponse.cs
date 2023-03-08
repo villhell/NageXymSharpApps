@@ -1,4 +1,4 @@
-﻿namespace NageXymSharpApps.Client.Models
+﻿namespace NageXymSharpApps.Shared.Models
 {
     public class NamespaceResponse
     {
@@ -13,10 +13,24 @@
         public bool Active { get; set; }
     }
 
+    /// <summary>
+    /// Alias
+    /// </summary>
     public class Alias
     {
+        /// <summary>
+        /// 1 : Mosaic
+        /// 2 : Address
+        /// </summary>
         public int Type { get; set; }
+        /// <summary>
+        /// Address
+        /// </summary>
         public string Address { get; set; }
+        /// <summary>
+        /// MosaicId
+        /// </summary>
+        public string MosaicId { get; set; }
     }
 
     public class Namespace

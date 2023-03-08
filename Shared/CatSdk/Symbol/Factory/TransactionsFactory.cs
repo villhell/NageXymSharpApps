@@ -1,8 +1,8 @@
+using CatSdk.Utils;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using CatSdk.Utils;
 
 namespace CatSdk.Symbol.Factory
 {

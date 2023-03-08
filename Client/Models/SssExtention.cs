@@ -1,6 +1,4 @@
-﻿using static System.Runtime.InteropServices.JavaScript.JSType;
-
-namespace NageXymSharpApps.Client.Models
+﻿namespace NageXymSharpApps.Client.Models
 {
     public class SssExtention
     {
@@ -35,6 +33,6 @@ namespace NageXymSharpApps.Client.Models
         /// <summary>
         /// Signer network type
         /// </summary>
-        public int networkType { get; set; } 
+        public int networkType { get; set; }
     }
 }

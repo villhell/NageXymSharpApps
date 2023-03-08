@@ -1,0 +1,82 @@
+﻿@page "/sample"
+@using NageXymSharpApps.Shard.Models;
+@using NageXymSharpApps.Shared;
+@using NageXymSharpApps.Shared.Models;
+@using Newtonsoft.Json;
+@inject HttpClient Http
+@inject IJSRuntime JSRuntime
+<h1>health check</h1>
+
+<p>@_healthCheck</p>
+
+@code {
+    private string _healthCheck;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            //var namespaceId = "villhell_testnet.subnamespace1.villhell_testnet_subnamespace1-1".Split('.');
+
+            //var b1 = CatSdk.Utils.Converter.Utf8ToBytes(namespaceId[0]);
+            //var b2 = CatSdk.Utils.Converter.Utf8ToBytes(namespaceId[1]);
+            //var b3 = CatSdk.Utils.Converter.Utf8ToBytes(namespaceId[2]);
+
+            //var parentUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b1);
+            //var childUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b2, parentUlongNamespaceId);
+            //var grandChildUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b3, childUlongNamespaceId);
+
+            //Console.WriteLine("villhell_testnet -> " + parentUlongNamespaceId.ToString("X16"));
+            //Console.WriteLine("subnamespace1 -> " + childUlongNamespaceId.ToString("X16"));
+            //Console.WriteLine("grandChildUlongNamespaceId -> " + grandChildUlongNamespaceId.ToString("X16"));
+
+            //var address = Converter.AddressToString(Converter.HexToBytes("address"));
+            //var parentNamespace = "symbol";
+            //var childNamespace = "xym";
+
+            //var b1 = CatSdk.Utils.Converter.Utf8ToBytes(parentNamespace);
+            //var b2 = CatSdk.Utils.Converter.Utf8ToBytes(childNamespace);
+
+            //var parentUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b1);
+            //var childUlongNamespaceId = CatSdk.Symbol.IdGenerator.GenerateNamespaceId(b2, parentUlongNamespaceId);
+
+            //Console.WriteLine(parentUlongNamespaceId.ToString("X16"));
+            //Console.WriteLine(childUlongNamespaceId.ToString("X16"));
+
+            //Console.WriteLine(namespaceId);
+            //var healthCheck = await Http.GetAsync("/api/healthCheck");
+            //_healthCheck = healthCheck.StatusCode.ToString();
+
+            //var address = "TAXCJGZX6R6G4MLZY2VAX6PMLWTEE7KN3O7IL6A";
+            //var nodeUrl = Uri.EscapeDataString("http://160.248.184.223:3000");
+            //var hash = "393ACFEADD51B869618B82086E7A808A6FD245C935A0B01519B51C38D7CAD919";
+
+            //var txStatusResponse = await Http.GetAsync($"/api/transactionStatus/{hash}?node_url={nodeUrl}");
+            //if (txStatusResponse.IsSuccessStatusCode)
+            //{
+            //    string responseBody = await txStatusResponse.Content.ReadAsStringAsync();
+            //    var res = JsonConvert.DeserializeObject<TransactionStatusResponse>(responseBody);
+            //    Console.WriteLine(responseBody);
+            //}
+
+            //var restrictionsAccountResult = await Http.GetAsync("/api/restrictionsaccount?address=TB4DUXT5576QR4YTGYQM7R73ESJOTAM4AOGY23Y&node_url=https://sym-test-04.opening-line.jp:3001");
+            //Console.WriteLine(restrictionsAccountResult.StatusCode);
+            //var body = await restrictionsAccountResult.Content.ReadAsStringAsync();
+            //var resa = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(body);
+            //Console.WriteLine(resa);
+            // SSS Extentionを読込む
+            var audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/play-sound.js"
+            );
+            await audioObjRef.InvokeVoidAsync("start");
+
+            await Task.Delay(2000);
+
+            await audioObjRef.InvokeVoidAsync("end");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex.ToString());
+        }
+    }
+}
