@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CatSdk.Symbol;
+using System;
 
 namespace Api.Server
 {
@@ -49,5 +50,6 @@ namespace Api.Server
             return (int)Math.Round(minFeeMultiplier + averageFeeMultiplier * 0.65, MidpointRounding.AwayFromZero);
         }
         #endregion
+
     }
 }

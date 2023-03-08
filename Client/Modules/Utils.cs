@@ -225,5 +225,17 @@ namespace NageXymSharpApps.Client.Modules
             return announceResponse;
         }
         #endregion
+
+        #region ネットワーク毎のBlockExplorerのURLを取得
+        /// <summary>
+        /// ネットワーク毎のBlockExplorerのURLを取得
+        /// </summary>
+        /// <param name="networkType"></param>
+        /// <returns></returns>
+        public static string GetBlockExplorerUrl(NetworkType networkType)
+        {
+            return networkType == NetworkType.MAINNET ? "https://symbol-explorer.com/" : "https://testnet.symbol.fyi/";
+        }
+        #endregion
     }
 }

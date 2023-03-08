@@ -6,6 +6,7 @@
 @using CatSdk.Utils;
 @using NageXymSharpApps.Client.Models;
 @using System.Text;
+@using NageXymSharpApps.Shard.Models;
 @using NageXymSharpApps.Shared.Models;
 @using Newtonsoft.Json;
 @using nagexymsharpweb.Excels;
@@ -14,6 +15,7 @@
 @using NageXymSharpApps.Client.Modules;
 @using AntDesign
 @using static NageXymSharpApps.Client.Models.Enums;
+@using System.Timers;
 @inject IMessageService _message
 @inject INotificationService notice
 @inject HttpClient httpClient
@@ -130,7 +132,9 @@
     private SssExtention _sss;
     private IJSObjectReference _sssObjRef;
     private string _networkName = string.Empty;
-    protected override void OnInitialized()
+    private static Timer _timer;
+    private static IJSObjectReference _audioObjRef;
+    protected override async void OnInitialized()
     {
         base.OnInitialized();
         _title = "Nage XYM Sharp";
@@ -140,6 +144,10 @@
         _nodeUrl = "https://sym-test-04.opening-line.jp:3001";
         _httpClient = httpClient;
         _notice = notice;
+
+        _audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
+            "import", "./js/play-sound.js"
+        );
 
         StateHasChanged();
     }
@@ -390,9 +398,9 @@
                 // OK以外の場合は無視して次の行へ
                 if (!string.Equals(item.Check, "OK")) continue;
 
-                // XYMをulongに変換、divisibility分を乗算
-                //var xym = (ulong)(item.Xym * 1000000);
+                // モザイク量に対してdivisibilityで桁をあわせる
                 var amount = (ulong)(item.Amount * Math.Pow(10, item.MosaicNamespaceInfo.MosaicInfo.Divisibility));
+                // モザイクIDをulongに変換
                 var mosaicId = ulong.Parse(item.MosaicNamespaceInfo.MosaicInfo.Id, System.Globalization.NumberStyles.HexNumber);
                 txs.Add(CreateTransaction(network, publicKey, item.Address, mosaicId, amount, Converter.Utf8ToPlainMessage(item.Message)));
             }
@@ -421,13 +429,13 @@
     /// <param name="network"></param>
     /// <param name="publicKey"></param>
     /// <param name="address"></param>
-    /// <param name="xym"></param>
+    /// <param name="mosaicId"></param>
+    /// <param name="amount"></param>
     /// <param name="message"></param>
     /// <returns></returns>
     private EmbeddedTransferTransactionV1 CreateTransaction(Network network, PublicKey publicKey, string address, ulong mosaicId, ulong amount, byte[] message)
     {
         var networkType = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET;
-        //ulong mosaicId = (ulong)(string.Equals(network.Name, "mainnet") ? 0x6BED913FA20223F8 : 0x72C0212E67A08BCE);
         return new EmbeddedTransferTransactionV1
             {
                 Network = networkType,
@@ -512,9 +520,12 @@
             return;
         }
 
+
         var ms = new MemoryStream(Converter.HexToBytes(signedTxPayload));
         var br = new BinaryReader(ms);
         var aggTx = AggregateCompleteTransactionV2.Deserialize(br);
+        var facade = new SymbolFacade(aggTx.Network == NetworkType.MAINNET ? Network.MainNet : Network.TestNet);
+        var hash = facade.HashTransaction(aggTx);
 
         var payload = TransactionsFactory.CreatePayload(aggTx);
 
@@ -525,6 +536,16 @@
 
             // Messageがなければエラー。もしくはデシリアライズに失敗した場合もエラー
             Console.WriteLine(responseDetailJson.Message);
+            await _notice.Success(new NotificationConfig()
+            {
+                Message = "Success",
+                Description = "new confirmed transaction.",
+                Duration = 3
+            });
+
+
+            await _audioObjRef.InvokeVoidAsync("start");
+            await ExecuteTimer(hash.ToString(), aggTx.Network);
 
         }
         catch (Exception ex)
@@ -533,13 +554,72 @@
             {
                 Message = "ERROR",
                 Description = ex.Message,
-
             });
         }
     }
     #endregion
 
+    #region TransactionStatusを確認する
+    /// <summary>
+    /// タイマーを起動する
+    /// </summary>
+    /// <param name="hash"></param>
+    /// <returns></returns>
+    public static async Task ExecuteTimer(string hash, NetworkType networkType)
+    {
+        _timer = new System.Timers.Timer(1000);
 
+        var endTime = DateTime.Now.AddSeconds(60);
+        _timer.Elapsed += (sender, e) => OnTimeEvent(sender, e, hash, endTime, networkType);
+        _timer.Enabled = true;
+    }
+
+    /// <summary>
+    /// 一定時間毎に実行されるコード
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="e"></param>
+    private static async Task OnTimeEvent(object source, System.Timers.ElapsedEventArgs e, string hash, DateTime endTime, NetworkType networkType)
+    {
+        // トランザクションのステータスを監視する
+
+        var txStatusResponse = await _httpClient.GetAsync($"/api/transactionStatus/{hash}?node_url={_nodeUrl}");
+        if (txStatusResponse.IsSuccessStatusCode)
+        {
+            string responseBody = await txStatusResponse.Content.ReadAsStringAsync();
+            var res = JsonConvert.DeserializeObject<TransactionStatusResponse>(responseBody);
+            Console.WriteLine(responseBody);
+
+            if(string.Equals(res.Group, "confirmed"))
+            {
+                _timer.Stop();
+                _timer.Dispose();
+
+                await _audioObjRef.InvokeVoidAsync("end");
+
+                await _notice.Success(new NotificationConfig()
+                {
+                    Message = "Success",
+                    Description = $"{Utils.GetBlockExplorerUrl(networkType)}transactions/{hash}",
+                    Duration = 10
+                });
+
+            }
+        }
+        if(DateTime.Now > endTime)
+        {
+            _timer.Stop();
+            _timer.Dispose();
+
+            await _notice.Success(new NotificationConfig()
+            {
+                Message = "Warning",
+                Description = $"We monitored the hash for one minute, but the status did not change to confirmed. Please check if the transfer was successful using BlockExplorer or other means.\nhttps://testnet.symbol.fyi/transactions/{hash}",
+                Duration = 10
+            });
+        }
+    }
+    #endregion
 
     #region JSRuntimeをDispose
     public async ValueTask DisposeAsync()

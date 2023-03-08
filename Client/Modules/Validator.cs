@@ -65,14 +65,28 @@ namespace NageXymSharpApps.Client.Modules
                 // 以前にチェックしたMosaicIdやMosaicNamespaceならチェック不要
                 if(!mosaicDict.TryGetValue(item.MosaicNamespace, out MosaicNamespaceInfo? mosaicNamespaceInfo))
                 {
-                    // モザイクネームスペースをチェック
-                    result = await ValidMosaicNamespace(item);
+                    Console.WriteLine(item.MosaicNamespace);
 
-                    if(result)
+                    // モザイクIDをチェック
+                    bool isMosaicId = await ValidMosaicId(item);
+
+                    // モザイクIDの情報なし
+                    if (!isMosaicId)
                     {
-                        // モザイクの詳細情報を取得
-                        var mosaicDetail = await GetMosaicDetail(item.MosaicNamespaceInfo.Namespace.Alias.MosaicId);
-                        item.MosaicNamespaceInfo.MosaicInfo = mosaicDetail!;
+                        // モザイクネームスペースをチェック
+                        result = await ValidMosaicNamespace(item);
+
+                        if (result)
+                        {
+                            // モザイクの詳細情報を取得
+                            var mosaicDetail = await GetMosaicDetail(item.MosaicNamespaceInfo.Namespace.Alias.MosaicId);
+                            item.MosaicNamespaceInfo.MosaicInfo = mosaicDetail!;
+                            mosaicDict.Add(item.MosaicNamespace, item.MosaicNamespaceInfo);
+                        }
+                    }
+                    // モザイクの情報あり
+                    else
+                    {
                         mosaicDict.Add(item.MosaicNamespace, item.MosaicNamespaceInfo);
                     }
                 }
@@ -141,6 +155,17 @@ namespace NageXymSharpApps.Client.Modules
             return await GetRestrictionsAccount(item.Address);
         }
 
+        public async Task<bool> ValidMosaicId(DataItem item)
+        {
+            var mosaicDetail = await GetMosaicDetail(item.MosaicNamespace);
+            if (mosaicDetail != null)
+            {
+                item.MosaicNamespaceInfo = new MosaicNamespaceInfo();
+                item.MosaicNamespaceInfo.MosaicInfo = mosaicDetail;
+                return true;
+            }
+            return false;
+        }
         public async Task<bool> ValidMosaicNamespace(DataItem item)
         {          
             // モザイクをNamespaceIdに変換
