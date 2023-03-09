@@ -16,6 +16,7 @@
 @using AntDesign
 @using static NageXymSharpApps.Client.Models.Enums;
 @using System.Timers;
+@using Microsoft.JSInterop;
 @inject IMessageService _message
 @inject INotificationService notice
 @inject HttpClient httpClient
@@ -134,6 +135,7 @@
     private string _networkName = string.Empty;
     private static Dictionary<string, Timer> _timers;
     private static IJSObjectReference _audioObjRef;
+    private DotNetObjectReference<object> _objRef;
     protected override async void OnInitialized()
     {
         base.OnInitialized();
@@ -145,9 +147,7 @@
         _httpClient = httpClient;
         _notice = notice;
 
-        _audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./js/play-sound.js"
-        );
+
         _timers = new Dictionary<string, Timer>();
         StateHasChanged();
     }
@@ -157,6 +157,9 @@
         if (firstRender)
         {
             _sss = null;
+            _audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/play-sound.js"
+            );
         }
         // 何度も呼び出されるので成功したらブロックする
         if (_sss != null) return;
@@ -493,9 +496,10 @@
 
         var payload = Converter.BytesToHex(aggTx.Serialize());
 
+        var objRef = DotNetObjectReference.Create(this);
         try
         {
-            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload });
+            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload }, objRef);
         }
         catch (Exception ex)
         {
@@ -507,6 +511,7 @@
         }
         finally
         {
+            if (objRef != null) objRef.Dispose();
             await Task.Delay(3000);
         }
     }
