@@ -413,7 +413,9 @@
             if (txs.Count > 0)
             {
                 // 作成したトランザクションを100件毎にアナウンスする。
-                foreach(var chunk in txs.Chunk(100))
+                //debug s
+                foreach(var chunk in txs.Chunk(2))
+                //debug e
                 {
                     await AnnounceAsync(network, facade, publicKey, new List<IBaseTransaction?>(chunk));
                 }
