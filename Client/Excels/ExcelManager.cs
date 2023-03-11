@@ -1,7 +1,5 @@
-﻿using AntDesign.TableModels;
-using ClosedXML.Excel;
+﻿using ClosedXML.Excel;
 using nagexymsharpweb.Models;
-using System.Reflection;
 
 namespace nagexymsharpweb.Excels
 {
@@ -10,11 +8,42 @@ namespace nagexymsharpweb.Excels
     /// </summary>
     public class ExcelManager
     {
+        #region 列番号
+        /// <summary>
+        /// 列：名前
+        /// </summary>
+        private const int COL_NAME = 1;
+        /// <summary>
+        /// 列：Twitter
+        /// </summary>
+        private const int COL_TWITTER = 2;
+        /// <summary>
+        /// 列：アドレス/ネームスペース
+        /// </summary>
+        private const int COL_ADDRESS_NAMESPACE = 5;
+        /// <summary>
+        /// 列：モザイク
+        /// </summary>
+        private const int COL_MOSAIC = 7;
+        /// <summary>
+        /// 列：数量
+        /// </summary>
+        private const int COL_AMOUNT = 8;
+        /// <summary>
+        /// 列：メッセージ
+        /// </summary>
+        private const int COL_MESSAGE = 9;
+        /// <summary>
+        /// 列：Check
+        /// </summary>
+        private const int COL_CHECK = 10;
+        #endregion
+
         /// <summary>
         /// ファイル名
         /// </summary>
         private string _fileName;
-        
+
         /// <summary>
         /// コンストラクタ
         /// </summary>
@@ -23,6 +52,10 @@ namespace nagexymsharpweb.Excels
             _fileName = fileName;
         }
 
+        /// <summary>
+        /// Excelファイルを読込む
+        /// </summary>
+        /// <returns></returns>
         public async Task<List<DataItem>> ReadExcelFileAsync()
         {
             var excelRowDataItems = new List<DataItem>();
@@ -35,25 +68,23 @@ namespace nagexymsharpweb.Excels
                     int key = 1;
                     using (var wb = new XLWorkbook(_fileName))
                     {
-                        foreach(var ws in wb.Worksheets)
+                        foreach (var ws in wb.Worksheets)
                         {
                             while (row <= ws.LastRowUsed().RowNumber())
                             {
                                 var rowdataItem = new DataItem
                                 {
                                     Key = key.ToString(),
-                                    Check = string.Empty, 
-                                    Name = ws.Cell(row, 1).GetString(),
-                                    Twitter = ws.Cell(row, 2).GetString(),
-                                    Namespace = string.Empty,
-                                    Address = ws.Cell(row, 5).GetString(),
-                                    Xym = ws.Cell(row, 7).GetDouble(),
-                                    Message = ws.Cell(row, 8).GetString()
+                                    Check = string.Empty,
+                                    Name = ws.Cell(row, COL_NAME).GetString(),
+                                    Twitter = ws.Cell(row, COL_TWITTER).GetString(),
+                                    AddressNamespace = string.Empty,
+                                    Address = ws.Cell(row, COL_ADDRESS_NAMESPACE).GetString(),
+                                    MosaicNamespace = ws.Cell(row, COL_MOSAIC).GetString(),
+                                    Amount = ws.Cell(row, COL_AMOUNT).GetDouble(),
+                                    Message = ws.Cell(row, COL_MESSAGE).GetString()
                                 };
 
-                                // debug s
-                                rowdataItem.Check = ws.Cell(row, 9).GetString();
-                                // debug e
                                 row++;
                                 key++;
                                 excelRowDataItems.Add(rowdataItem);
