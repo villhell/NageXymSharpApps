@@ -347,7 +347,7 @@
                 // 進捗
                 count++;
 
-                _progress = (count / max) * 100;
+                _progress = Math.Round((count / max) * 100, 1);
                 Console.WriteLine(_progress);
                 await validator.ValidateItems(item, mosaicDict);
                 
