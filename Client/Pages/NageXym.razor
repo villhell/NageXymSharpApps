@@ -16,6 +16,7 @@
 @using AntDesign
 @using static NageXymSharpApps.Client.Models.Enums;
 @using System.Timers;
+@using Microsoft.JSInterop;
 @inject IMessageService _message
 @inject INotificationService notice
 @inject HttpClient httpClient
@@ -59,6 +60,7 @@
                     <Paragraph Style="font-size:1rem;font-weight:bold;">２．Checkボタンを押してアドレス/ネームスペースに対して送金できるかチェックします。</Paragraph>
                 </div>
                 <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
+                <Progress Type=ProgressType.Circle Percent =@_progress />
             </TabPane>
             <TabPane Tab="Step 3" Key="3">
                 <div style="display:flex;align-items: baseline;">
@@ -75,9 +77,18 @@
                PageSize="100"
                Loading=_loading
                Bordered>
-            <PropertyColumn Property="c=>c.Check"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Check">
+                @if (string.Equals(context.Check, "OK"))
+                {
+                    <Tag Color="@PresetColor.Green.ToString()">@context.Check</Tag>
+                }
+                else if(!string.IsNullOrEmpty(context.Check))
+                {
+                    <Tag Color="@PresetColor.Volcano.ToString()">@context.Check</Tag>
+                }
+            </PropertyColumn>
             <PropertyColumn Property="c=>c.Name"></PropertyColumn>
-            <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
+@*            <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>*@
             <PropertyColumn Property="c=>c.AddressNamespace"></PropertyColumn>
             <PropertyColumn Property="c=>c.Address"></PropertyColumn>
             <PropertyColumn Property="c=>c.MosaicNamespace"></PropertyColumn>
@@ -132,8 +143,11 @@
     private SssExtention _sss;
     private IJSObjectReference _sssObjRef;
     private string _networkName = string.Empty;
-    private static Timer _timer;
+    private static Dictionary<string, Timer> _timers;
     private static IJSObjectReference _audioObjRef;
+    private double _progress;
+
+    private DotNetObjectReference<object> _objRef;
     protected override async void OnInitialized()
     {
         base.OnInitialized();
@@ -144,16 +158,21 @@
         _nodeUrl = "https://sym-test-04.opening-line.jp:3001";
         _httpClient = httpClient;
         _notice = notice;
-
-        _audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
-            "import", "./js/play-sound.js"
-        );
-
+        _progress = 0;
+        _timers = new Dictionary<string, Timer>();
         StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            await Task.Delay(1000);
+            _sss = null;
+            _audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/play-sound.js"
+            );
+        }
         // 何度も呼び出されるので成功したらブロックする
         if (_sss != null) return;
 
@@ -232,7 +251,7 @@
                 Duration = 2,
             };
             await _message.Success(config);
-
+            _progress = 0;
         }
         catch (Exception ex)
         {
@@ -320,10 +339,18 @@
 
             // グリッド内のデータをチェックする
             var validator = new Validator(_httpClient, datas, _nodeUrl);
-            await validator.ValidateItems();
-
+            double count = 0;
+            _progress = 0;
+            var max = datas.Count;
             foreach(var item in datas)
             {
+                // 進捗
+                count++;
+
+                _progress = Math.Round((count / max) * 100, 1);
+                Console.WriteLine(_progress);
+                await validator.ValidateItems(item, mosaicDict);
+                
                 if(item.Valid)
                 {
                     item.Check = "OK";
@@ -332,9 +359,9 @@
                 {
                     item.Check = "NG";
                 }
+                StateHasChanged();
             }
 
-            StateHasChanged();
 
             await _message.Success(new MessageConfig
             {
@@ -409,7 +436,7 @@
             if (txs.Count > 0)
             {
                 // 作成したトランザクションを100件毎にアナウンスする。
-                foreach(var chunk in txs.Chunk(100))
+                foreach(var chunk in txs.Chunk(Consts.AGGREGATE_TX_COUNT))
                 {
                     await AnnounceAsync(network, facade, publicKey, new List<IBaseTransaction?>(chunk));
                 }
@@ -487,9 +514,10 @@
 
         var payload = Converter.BytesToHex(aggTx.Serialize());
 
+        var objRef = DotNetObjectReference.Create(this);
         try
         {
-            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload });
+            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload }, objRef);
         }
         catch (Exception ex)
         {
@@ -501,6 +529,7 @@
         }
         finally
         {
+            if (objRef != null) objRef.Dispose();
             await Task.Delay(3000);
         }
     }
@@ -520,7 +549,6 @@
             return;
         }
 
-
         var ms = new MemoryStream(Converter.HexToBytes(signedTxPayload));
         var br = new BinaryReader(ms);
         var aggTx = AggregateCompleteTransactionV2.Deserialize(br);
@@ -536,6 +564,9 @@
 
             // Messageがなければエラー。もしくはデシリアライズに失敗した場合もエラー
             Console.WriteLine(responseDetailJson.Message);
+
+            await _audioObjRef.InvokeVoidAsync("start");
+
             await _notice.Success(new NotificationConfig()
             {
                 Message = "Success",
@@ -543,8 +574,6 @@
                 Duration = 3
             });
 
-
-            await _audioObjRef.InvokeVoidAsync("start");
             await ExecuteTimer(hash.ToString(), aggTx.Network);
 
         }
@@ -567,11 +596,13 @@
     /// <returns></returns>
     public static async Task ExecuteTimer(string hash, NetworkType networkType)
     {
-        _timer = new System.Timers.Timer(1000);
+        var timer = new System.Timers.Timer(1000);
 
         var endTime = DateTime.Now.AddSeconds(60);
-        _timer.Elapsed += (sender, e) => OnTimeEvent(sender, e, hash, endTime, networkType);
-        _timer.Enabled = true;
+        timer.Elapsed += (sender, e) => OnTimeEvent(sender, e, hash, endTime, networkType);
+        timer.Enabled = true;
+
+        _timers.Add(hash, timer);
     }
 
     /// <summary>
@@ -581,8 +612,9 @@
     /// <param name="e"></param>
     private static async Task OnTimeEvent(object source, System.Timers.ElapsedEventArgs e, string hash, DateTime endTime, NetworkType networkType)
     {
-        // トランザクションのステータスを監視する
+        _timers.TryGetValue(hash, out Timer timer);
 
+        // トランザクションのステータスを監視する
         var txStatusResponse = await _httpClient.GetAsync($"/api/transactionStatus/{hash}?node_url={_nodeUrl}");
         if (txStatusResponse.IsSuccessStatusCode)
         {
@@ -592,8 +624,9 @@
 
             if(string.Equals(res.Group, "confirmed"))
             {
-                _timer.Stop();
-                _timer.Dispose();
+                timer!.Stop();
+                timer.Dispose();
+                _timers.Remove(hash);
 
                 await _audioObjRef.InvokeVoidAsync("end");
 
@@ -608,8 +641,9 @@
         }
         if(DateTime.Now > endTime)
         {
-            _timer.Stop();
-            _timer.Dispose();
+            timer.Stop();
+            timer.Dispose();
+            _timers.Remove(hash);
 
             await _notice.Success(new NotificationConfig()
             {
