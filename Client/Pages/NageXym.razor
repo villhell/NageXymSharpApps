@@ -16,6 +16,7 @@
 @using AntDesign
 @using static NageXymSharpApps.Client.Models.Enums;
 @using System.Timers;
+@using Microsoft.JSInterop;
 @inject IMessageService _message
 @inject INotificationService notice
 @inject HttpClient httpClient
@@ -144,8 +145,12 @@
     private string _networkName = string.Empty;
     private static Dictionary<string, Timer> _timers;
     private static IJSObjectReference _audioObjRef;
+<<<<<<< HEAD
     private double _progress;
 
+=======
+    private DotNetObjectReference<object> _objRef;
+>>>>>>> b46d0fe46154bb41bd0de43e5d6db44fb4ea0568
     protected override async void OnInitialized()
     {
         base.OnInitialized();
@@ -156,7 +161,12 @@
         _nodeUrl = "https://sym-test-04.opening-line.jp:3001";
         _httpClient = httpClient;
         _notice = notice;
+<<<<<<< HEAD
         _progress = 0;
+=======
+
+
+>>>>>>> b46d0fe46154bb41bd0de43e5d6db44fb4ea0568
         _timers = new Dictionary<string, Timer>();
         StateHasChanged();
     }
@@ -512,9 +522,10 @@
 
         var payload = Converter.BytesToHex(aggTx.Serialize());
 
+        var objRef = DotNetObjectReference.Create(this);
         try
         {
-            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload });
+            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload }, objRef);
         }
         catch (Exception ex)
         {
@@ -526,7 +537,12 @@
         }
         finally
         {
+<<<<<<< HEAD
             await Task.Delay(3500);
+=======
+            if (objRef != null) objRef.Dispose();
+            await Task.Delay(3000);
+>>>>>>> b46d0fe46154bb41bd0de43e5d6db44fb4ea0568
         }
     }
     #endregion
