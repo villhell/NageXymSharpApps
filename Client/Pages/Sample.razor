@@ -3,6 +3,7 @@
 @using NageXymSharpApps.Shared;
 @using NageXymSharpApps.Shared.Models;
 @using Newtonsoft.Json;
+@using NageXymSharpApps.Client.Modules;
 @inject HttpClient Http
 @inject IJSRuntime JSRuntime
 <h1>health check</h1>
@@ -43,6 +44,10 @@
             //Console.WriteLine(parentUlongNamespaceId.ToString("X16"));
             //Console.WriteLine(childUlongNamespaceId.ToString("X16"));
 
+            //var ns = "villhell_testnet";
+            //var ns = "symbol";
+            //Console.WriteLine(Utils.StringToNamespaceId(ns));
+            //Console.WriteLine(Utils.StringNamespaceToNamespaceId(ns));
             //Console.WriteLine(namespaceId);
             //var healthCheck = await Http.GetAsync("/api/healthCheck");
             //_healthCheck = healthCheck.StatusCode.ToString();

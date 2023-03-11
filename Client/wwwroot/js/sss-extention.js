@@ -1,7 +1,7 @@
 ﻿
 export async function GetSssObject(){
 
-    if (window.isAllowedSSS()) {
+    if (window.SSS) {
         return window.SSS;
     }
 }

@@ -14,28 +14,26 @@ namespace NageXymSharpApps.Client.Modules
         private readonly HttpClient _httpClient;
         private List<DataItem> _dataItems;
         private string _nodeUrl;
+
         public Validator(HttpClient httpClient, List<DataItem> dataItems, string nodeUrl)
         {
-            _httpClient= httpClient;
-            _dataItems= dataItems;
-            _nodeUrl= nodeUrl;
+            _httpClient = httpClient;
+            _dataItems = dataItems;
+            _nodeUrl = nodeUrl;
         }
 
         /// <summary>
         /// ValidateItems
         /// </summary>
         /// <returns></returns>
-        public async Task ValidateItems()
+        public async Task ValidateItems(DataItem item, Dictionary<string, MosaicNamespaceInfo> mosaicDict)
         {
-            var mosaicDict = new Dictionary<string, MosaicNamespaceInfo>(); 
-            
-            foreach (DataItem item in _dataItems)
-            {
+              
                 // CheckがOKならスキップ
                 if (string.Equals(item.Check, "OK"))
                 {
                     item.Valid = true;
-                    continue;
+                    return;
                 }
 
                 // アドレスをチェック
@@ -60,7 +58,7 @@ namespace NageXymSharpApps.Client.Modules
                 }
 
                 // ここでresult=falseなら以降の処理は行わない
-                if (!result) continue;
+                if (!result) return;
 
                 // 以前にチェックしたMosaicIdやMosaicNamespaceならチェック不要
                 if(!mosaicDict.TryGetValue(item.MosaicNamespace, out MosaicNamespaceInfo? mosaicNamespaceInfo))
@@ -98,7 +96,7 @@ namespace NageXymSharpApps.Client.Modules
 
                 // 全てのValidateを通過
                 if (result) item.Valid = true;
-            }
+            //}
         }
 
         /// <summary>
