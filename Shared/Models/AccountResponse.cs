@@ -1,4 +1,6 @@
-﻿namespace NageXymSharpApps.Client.Models
+﻿using System.Collections.Generic;
+
+namespace NageXymSharpApps.Shared.Models
 {
     public class AccountResponse
     {

@@ -1,7 +1,7 @@
-using System;
-using System.Linq;
 using CatSdk.Utils;
 using Org.BouncyCastle.Crypto.Digests;
+using System;
+using System.Linq;
 
 namespace CatSdk.Symbol
 {

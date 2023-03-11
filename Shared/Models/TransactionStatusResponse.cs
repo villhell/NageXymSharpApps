@@ -1,4 +1,4 @@
-﻿namespace NageXymSharpApps.Client.Models
+﻿namespace NageXymSharpApps.Shard.Models
 {
     public class TransactionStatusResponse
     {

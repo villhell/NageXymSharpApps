@@ -1,5 +1,5 @@
-using System;
 using CatSdk.Utils;
+using System;
 
 namespace CatSdk
 {

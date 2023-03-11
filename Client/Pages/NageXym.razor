@@ -6,11 +6,17 @@
 @using CatSdk.Utils;
 @using NageXymSharpApps.Client.Models;
 @using System.Text;
+@using NageXymSharpApps.Shard.Models;
+@using NageXymSharpApps.Shared.Models;
+@using Newtonsoft.Json;
 @using nagexymsharpweb.Excels;
 @using nagexymsharpweb.Models;
 @using System.ComponentModel
 @using NageXymSharpApps.Client.Modules;
 @using AntDesign
+@using static NageXymSharpApps.Client.Models.Enums;
+@using System.Timers;
+@using Microsoft.JSInterop;
 @inject IMessageService _message
 @inject INotificationService notice
 @inject HttpClient httpClient
@@ -54,6 +60,7 @@
                     <Paragraph Style="font-size:1rem;font-weight:bold;">２．Checkボタンを押してアドレス/ネームスペースに対して送金できるかチェックします。</Paragraph>
                 </div>
                 <Button Type="@ButtonType.Primary" OnClick="@Check_Click">Check</Button>
+                <Progress Type=ProgressType.Circle Percent =@_progress />
             </TabPane>
             <TabPane Tab="Step 3" Key="3">
                 <div style="display:flex;align-items: baseline;">
@@ -70,11 +77,23 @@
                PageSize="100"
                Loading=_loading
                Bordered>
-            <PropertyColumn Property="c=>c.Check"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Check">
+                @if (string.Equals(context.Check, "OK"))
+                {
+                    <Tag Color="@PresetColor.Green.ToString()">@context.Check</Tag>
+                }
+                else if(!string.IsNullOrEmpty(context.Check))
+                {
+                    <Tag Color="@PresetColor.Volcano.ToString()">@context.Check</Tag>
+                }
+            </PropertyColumn>
             <PropertyColumn Property="c=>c.Name"></PropertyColumn>
-            <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>
-            <PropertyColumn Property="c=>c.Namespace"></PropertyColumn>
+@*            <PropertyColumn Property="c=>c.Twitter"></PropertyColumn>*@
+            <PropertyColumn Property="c=>c.AddressNamespace"></PropertyColumn>
             <PropertyColumn Property="c=>c.Address"></PropertyColumn>
+            <PropertyColumn Property="c=>c.MosaicNamespace"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Amount"></PropertyColumn>
+            <PropertyColumn Property="c=>c.Message"></PropertyColumn>
         </Table>
     </div>
 </div>
@@ -124,6 +143,11 @@
     private SssExtention _sss;
     private IJSObjectReference _sssObjRef;
     private string _networkName = string.Empty;
+    private static Dictionary<string, Timer> _timers;
+    private static IJSObjectReference _audioObjRef;
+    private double _progress;
+
+    private DotNetObjectReference<object> _objRef;
     protected override async void OnInitialized()
     {
         base.OnInitialized();
@@ -134,12 +158,21 @@
         _nodeUrl = "https://sym-test-04.opening-line.jp:3001";
         _httpClient = httpClient;
         _notice = notice;
-
+        _progress = 0;
+        _timers = new Dictionary<string, Timer>();
         StateHasChanged();
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
+        if (firstRender)
+        {
+            await Task.Delay(1000);
+            _sss = null;
+            _audioObjRef = await JSRuntime.InvokeAsync<IJSObjectReference>(
+                "import", "./js/play-sound.js"
+            );
+        }
         // 何度も呼び出されるので成功したらブロックする
         if (_sss != null) return;
 
@@ -151,7 +184,7 @@
         _sss = await _sssObjRef.InvokeAsync<SssExtention>("GetSssObject");
         if (_sss != null)
         {
-            _networkName = _sss.activeNetworkType == 104 ? "Mainnet" : "Testnet";
+            _networkName = _sss.activeNetworkType == (int)SymbolNetworkType.Mainnet ? "Mainnet" : "Testnet";
             //break;
         }
         else
@@ -200,9 +233,9 @@
             StateHasChanged();
 
             var config = new MessageConfig
-                {
-                    Content = "Loading...",
-                };
+            {
+                Content = "Loading...",
+            };
             await _message.Loading(config);
 
             // Excelファイル読込み
@@ -213,12 +246,12 @@
             _loading = false;
             StateHasChanged();
             config = new MessageConfig
-                {
-                    Content = "Loaded",
-                    Duration = 2,
-                };
+            {
+                Content = "Loaded",
+                Duration = 2,
+            };
             await _message.Success(config);
-
+            _progress = 0;
         }
         catch (Exception ex)
         {
@@ -262,8 +295,10 @@
     /// </summary>
     private async Task Check_Click()
     {
-
-        await GetNodeUrl(_sss.activeNetworkType);
+        if (_sss.activeNetworkType == (int)SymbolNetworkType.Mainnet)
+        {
+            await GetNodeUrl(_sss.activeNetworkType);
+        }
 
         // Azureでデプロイするとhttpsになるので3000は使えない
         var port = new Uri(_nodeUrl).Port;
@@ -291,94 +326,53 @@
             // ローディング開始
             string key = $"updatable-{DateTime.Now.Ticks}";
             var config = new MessageConfig
-                {
-                    Content = "Checking...",
-                };
+            {
+                Content = "Checking...",
+                Duration = 1
+            };
             await _message.Loading(config);
 
             //StateHasChanged();
 
-            // グリッドを一行ずつ読んでいく
-            foreach (var row in datas)
+            // モザイクは重複する可能性が高いので一度チェックしたものは保持しておく
+            var mosaicDict = new Dictionary<string, MosaicNamespaceInfo>();
+
+            // グリッド内のデータをチェックする
+            var validator = new Validator(_httpClient, datas, _nodeUrl);
+            double count = 0;
+            _progress = 0;
+            var max = datas.Count;
+            foreach(var item in datas)
             {
-                // CheckがOKならスキップ
-                if (string.Equals(row.Check, "OK")) continue;
+                // 進捗
+                count++;
 
-                StateHasChanged();
-
-                // アドレス欄が空白
-                if (string.IsNullOrEmpty(row.Address))
+                _progress = Math.Round((count / max) * 100, 1);
+                Console.WriteLine(_progress);
+                await validator.ValidateItems(item, mosaicDict);
+                
+                if(item.Valid)
                 {
-                    // NGを設定して次の行へ
-                    row.Check = "NG";
-                    continue;
-                }
-
-                // アドレス情報取得
-                var addressResponse = await Utils.GetAddressAsync(row.Address, httpClient, _nodeUrl);
-                if (addressResponse != null)
-                {
-                    // アドレス情報取得成功
-
-                    // 受信制限があるか
-                    var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(row.Address, httpClient, _nodeUrl);
-                    if (!isRestrictionsAccount)
-                    {
-                        // 受信制限なし
-                        row.Check = "OK";
-                    }
-                    else
-                    {
-                        // 受信制限あり
-                        row.Check = "Restricted reception";
-                    }
-
-                    // 次の行へ
-                    continue;
-                }
-
-                // アドレス情報が取得できなければネームスペース情報を取得
-                var namespaceResponse = await Utils.GetNamespaceAsync(row.Address, httpClient, _nodeUrl);
-                if (namespaceResponse != null)
-                {
-                    // ネームスペース情報取得成功
-                    var address = namespaceResponse.Namespace.Alias.Address ?? namespaceResponse.Namespace.OwnerAddress;
-                    address = Converter.AddressToString(Converter.HexToBytes(address));
-
-                    // 受信制限があるか
-                    var isRestrictionsAccount = await Utils.IsRestrictionAccountAsync(address, httpClient, _nodeUrl);
-                    if (!isRestrictionsAccount)
-                    {
-                        // 受信制限なし
-                        row.Check = "OK";
-                    }
-                    else
-                    {
-                        // 受信制限あり
-                        row.Check = "Restricted reception";
-                    }
-
-                    // row.Check = "OK";
-                    row.Namespace = row.Address;
-                    row.Address = address;
+                    item.Check = "OK";
                 }
                 else
                 {
-                    row.Check = "NG";
+                    item.Check = "NG";
                 }
+                StateHasChanged();
             }
 
-            StateHasChanged();
 
             await _message.Success(new MessageConfig
-                {
-                    Content = "Complete!",
-                    Duration = 2
-                });
+            {
+                Content = "Complete!",
+                Duration = 3
+            });
         }
         catch (Exception ex)
         {
             await _message.Error(ex.Message);
+            Console.WriteLine(ex.Message);
         }
         finally
         {
@@ -398,7 +392,10 @@
     {
         try
         {
-            await GetNodeUrl(_sss.activeNetworkType);
+            if (_sss.activeNetworkType == (int)SymbolNetworkType.Mainnet)
+            {
+                await GetNodeUrl(_sss.activeNetworkType);
+            }
 
             // ネットワーク情報を取得
             var networkInfo = await Utils.GetNetworkInfo(_nodeUrl, httpClient);
@@ -428,16 +425,18 @@
                 // OK以外の場合は無視して次の行へ
                 if (!string.Equals(item.Check, "OK")) continue;
 
-                // XYMをulongに変換、divisibility分を乗算
-                var xym = (ulong)(item.Xym * 1000000);
-                txs.Add(CreateTransaction(network, publicKey, item.Address, xym, Converter.Utf8ToPlainMessage(item.Message)));
+                // モザイク量に対してdivisibilityで桁をあわせる
+                var amount = (ulong)(item.Amount * Math.Pow(10, item.MosaicNamespaceInfo.MosaicInfo.Divisibility));
+                // モザイクIDをulongに変換
+                var mosaicId = ulong.Parse(item.MosaicNamespaceInfo.MosaicInfo.Id, System.Globalization.NumberStyles.HexNumber);
+                txs.Add(CreateTransaction(network, publicKey, item.Address, mosaicId, amount, Converter.Utf8ToPlainMessage(item.Message)));
             }
 
             // トランザクションをアナウンス
             if (txs.Count > 0)
             {
                 // 作成したトランザクションを100件毎にアナウンスする。
-                foreach(var chunk in txs.Chunk(100))
+                foreach(var chunk in txs.Chunk(Consts.AGGREGATE_TX_COUNT))
                 {
                     await AnnounceAsync(network, facade, publicKey, new List<IBaseTransaction?>(chunk));
                 }
@@ -457,13 +456,13 @@
     /// <param name="network"></param>
     /// <param name="publicKey"></param>
     /// <param name="address"></param>
-    /// <param name="xym"></param>
+    /// <param name="mosaicId"></param>
+    /// <param name="amount"></param>
     /// <param name="message"></param>
     /// <returns></returns>
-    private EmbeddedTransferTransactionV1 CreateTransaction(Network network, PublicKey publicKey, string address, ulong xym, byte[] message)
+    private EmbeddedTransferTransactionV1 CreateTransaction(Network network, PublicKey publicKey, string address, ulong mosaicId, ulong amount, byte[] message)
     {
         var networkType = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET;
-        ulong mosaicId = (ulong)(string.Equals(network.Name, "mainnet") ? 0x6BED913FA20223F8 : 0x72C0212E67A08BCE);
         return new EmbeddedTransferTransactionV1
             {
                 Network = networkType,
@@ -474,7 +473,7 @@
                     new()
                     {
                         MosaicId = new UnresolvedMosaicId(mosaicId),
-                        Amount = new Amount(xym)
+                        Amount = new Amount(amount)
                     }
                     },
                 Message = message
@@ -515,20 +514,22 @@
 
         var payload = Converter.BytesToHex(aggTx.Serialize());
 
+        var objRef = DotNetObjectReference.Create(this);
         try
         {
-            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload });
+            await JSRuntime.InvokeVoidAsync("NageXymSharpApps.SetTransactionByPayload", new object[] { payload }, objRef);
         }
         catch (Exception ex)
         {
             await _notice.Error(new NotificationConfig()
-                {
-                    Message = "ERROR",
-                    Description = ex.Message
-                });
+            {
+                Message = "ERROR",
+                Description = ex.Message
+            });
         }
         finally
         {
+            if (objRef != null) objRef.Dispose();
             await Task.Delay(3000);
         }
     }
@@ -547,10 +548,12 @@
             Console.WriteLine(signedTxPayload);
             return;
         }
-        
+
         var ms = new MemoryStream(Converter.HexToBytes(signedTxPayload));
         var br = new BinaryReader(ms);
         var aggTx = AggregateCompleteTransactionV2.Deserialize(br);
+        var facade = new SymbolFacade(aggTx.Network == NetworkType.MAINNET ? Network.MainNet : Network.TestNet);
+        var hash = facade.HashTransaction(aggTx);
 
         var payload = TransactionsFactory.CreatePayload(aggTx);
 
@@ -562,6 +565,17 @@
             // Messageがなければエラー。もしくはデシリアライズに失敗した場合もエラー
             Console.WriteLine(responseDetailJson.Message);
 
+            await _audioObjRef.InvokeVoidAsync("start");
+
+            await _notice.Success(new NotificationConfig()
+            {
+                Message = "Success",
+                Description = "new confirmed transaction.",
+                Duration = 3
+            });
+
+            await ExecuteTimer(hash.ToString(), aggTx.Network);
+
         }
         catch (Exception ex)
         {
@@ -569,7 +583,73 @@
             {
                 Message = "ERROR",
                 Description = ex.Message,
-                
+            });
+        }
+    }
+    #endregion
+
+    #region TransactionStatusを確認する
+    /// <summary>
+    /// タイマーを起動する
+    /// </summary>
+    /// <param name="hash"></param>
+    /// <returns></returns>
+    public static async Task ExecuteTimer(string hash, NetworkType networkType)
+    {
+        var timer = new System.Timers.Timer(1000);
+
+        var endTime = DateTime.Now.AddSeconds(60);
+        timer.Elapsed += (sender, e) => OnTimeEvent(sender, e, hash, endTime, networkType);
+        timer.Enabled = true;
+
+        _timers.Add(hash, timer);
+    }
+
+    /// <summary>
+    /// 一定時間毎に実行されるコード
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="e"></param>
+    private static async Task OnTimeEvent(object source, System.Timers.ElapsedEventArgs e, string hash, DateTime endTime, NetworkType networkType)
+    {
+        _timers.TryGetValue(hash, out Timer timer);
+
+        // トランザクションのステータスを監視する
+        var txStatusResponse = await _httpClient.GetAsync($"/api/transactionStatus/{hash}?node_url={_nodeUrl}");
+        if (txStatusResponse.IsSuccessStatusCode)
+        {
+            string responseBody = await txStatusResponse.Content.ReadAsStringAsync();
+            var res = JsonConvert.DeserializeObject<TransactionStatusResponse>(responseBody);
+            Console.WriteLine(responseBody);
+
+            if(string.Equals(res.Group, "confirmed"))
+            {
+                timer!.Stop();
+                timer.Dispose();
+                _timers.Remove(hash);
+
+                await _audioObjRef.InvokeVoidAsync("end");
+
+                await _notice.Success(new NotificationConfig()
+                {
+                    Message = "Success",
+                    Description = $"{Utils.GetBlockExplorerUrl(networkType)}transactions/{hash}",
+                    Duration = 10
+                });
+
+            }
+        }
+        if(DateTime.Now > endTime)
+        {
+            timer.Stop();
+            timer.Dispose();
+            _timers.Remove(hash);
+
+            await _notice.Success(new NotificationConfig()
+            {
+                Message = "Warning",
+                Description = $"We monitored the hash for one minute, but the status did not change to confirmed. Please check if the transfer was successful using BlockExplorer or other means.\nhttps://testnet.symbol.fyi/transactions/{hash}",
+                Duration = 10
             });
         }
     }

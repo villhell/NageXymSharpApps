@@ -1,4 +1,4 @@
-﻿namespace NageXymSharpApps.Client.Models
+﻿namespace NageXymSharpApps.Shared.Models
 {
     /// <summary>
     /// Average = Math.Truncate(minFeeMultiplier:10 + averageFeeMultiplier:113 * 0.65)

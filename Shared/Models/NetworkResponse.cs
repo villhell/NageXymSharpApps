@@ -1,4 +1,4 @@
-﻿namespace NageXymSharpApps.Client.Models
+﻿namespace NageXymSharpApps.Shared.Models
 {
     public class NetworkResponse
     {
