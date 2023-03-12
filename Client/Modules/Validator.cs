@@ -36,6 +36,12 @@ namespace NageXymSharpApps.Client.Modules
                     return;
                 }
 
+                if (string.IsNullOrEmpty(item.Address))
+                {
+                    item.Valid = false;
+                    return; 
+                }
+
                 // アドレスをチェック
                 var result = await ValidAddress(item);
 
@@ -63,8 +69,6 @@ namespace NageXymSharpApps.Client.Modules
                 // 以前にチェックしたMosaicIdやMosaicNamespaceならチェック不要
                 if(!mosaicDict.TryGetValue(item.MosaicNamespace, out MosaicNamespaceInfo? mosaicNamespaceInfo))
                 {
-                    Console.WriteLine(item.MosaicNamespace);
-
                     // モザイクIDをチェック
                     bool isMosaicId = await ValidMosaicId(item);
 
@@ -195,7 +199,6 @@ namespace NageXymSharpApps.Client.Modules
                 var accountContent = await accountResponse.Content.ReadAsStringAsync();
                 var accountInfo = JsonConvert.DeserializeObject<AccountResponse>(accountContent);
 
-                Console.WriteLine(accountInfo);
                 if (accountInfo != null)
                 {
                     account = accountInfo.Account;
@@ -245,8 +248,6 @@ namespace NageXymSharpApps.Client.Modules
             {
                 var restrictionsContent = await restrictionsAccountResult.Content.ReadAsStringAsync();
                 var restrictionsAccount = JsonConvert.DeserializeObject<RestrictionsAccountResponse>(restrictionsContent);
-
-                Console.WriteLine(restrictionsContent);
 
                 // 受信制限情報が無し
                 return restrictionsAccount!.Data.Count == 0 ? false : true;
