@@ -348,7 +348,6 @@
                 count++;
 
                 _progress = Math.Round((count / max) * 100, 1);
-                Console.WriteLine(_progress);
                 await validator.ValidateItems(item, mosaicDict);
                 
                 if(item.Valid)
@@ -545,7 +544,6 @@
     {
         if (string.IsNullOrEmpty(signedTxPayload))
         {
-            Console.WriteLine(signedTxPayload);
             return;
         }
 
@@ -620,7 +618,6 @@
         {
             string responseBody = await txStatusResponse.Content.ReadAsStringAsync();
             var res = JsonConvert.DeserializeObject<TransactionStatusResponse>(responseBody);
-            Console.WriteLine(responseBody);
 
             if(string.Equals(res.Group, "confirmed"))
             {
